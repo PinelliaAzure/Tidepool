@@ -33,7 +33,7 @@ struct BalanceHeroView: View {
                         Text(TideFormatter.currencySymbol(for: balance.currency))
                             .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary)
-                        Text(TideFormatter.amount(balance.total, style: .hero))
+                        Text(store.privacyMode ? "•••" : TideFormatter.amount(balance.total, style: .hero))
                             .font(.system(size: 40, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                     }
@@ -93,13 +93,17 @@ struct BalanceHeroView: View {
             }
             .frame(height: 5)
             HStack {
-                Text("赠送 \(TideFormatter.money(granted, currency: currencyCode, style: .hero))")
+                Text(privacyMask("赠送 \(TideFormatter.money(granted, currency: currencyCode, style: .hero))"))
                 Spacer()
-                Text("充值 \(TideFormatter.money(toppedUp, currency: currencyCode, style: .hero))")
+                Text(privacyMask("充值 \(TideFormatter.money(toppedUp, currency: currencyCode, style: .hero))"))
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
         }
+    }
+
+    private func privacyMask(_ text: String) -> String {
+        store.privacyMode ? "•••" : text
     }
 
     private var currencyCode: String {

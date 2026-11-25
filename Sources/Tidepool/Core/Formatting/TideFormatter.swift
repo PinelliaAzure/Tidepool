@@ -65,23 +65,51 @@ enum TideFormatter {
     static func countdown(to date: Date, now: Date = Date()) -> String {
         let interval = date.timeIntervalSince(now)
         guard interval > 0 else { return "已重置" }
+        return countdownShort(to: date, now: now) + "后重置"
+    }
+
+    /// 不带后缀的倒计时 → "8 小时 19 分" / "45 分钟" / "3 天 2 小时"。
+    static func countdownShort(to date: Date, now: Date = Date()) -> String {
+        let interval = date.timeIntervalSince(now)
+        guard interval > 0 else { return "即将" }
         let totalMinutes = Int((interval / 60).rounded(.up))
         if totalMinutes >= 1440 {
             let days = totalMinutes / 1440
             let hours = (totalMinutes % 1440) / 60
-            return hours > 0 ? "\(days) 天 \(hours) 小时后重置" : "\(days) 天后重置"
+            return hours > 0 ? "\(days) 天 \(hours) 小时" : "\(days) 天"
         }
         if totalMinutes >= 60 {
             let hours = totalMinutes / 60
             let minutes = totalMinutes % 60
-            return minutes > 0 ? "\(hours) 小时 \(minutes) 分后重置" : "\(hours) 小时后重置"
+            return minutes > 0 ? "\(hours) 小时 \(minutes) 分" : "\(hours) 小时"
         }
-        return "\(totalMinutes) 分钟后重置"
+        return "\(totalMinutes) 分钟"
     }
 
     /// "11月26日 14:30"
     static func resetDateText(_ date: Date) -> String {
         shortDateTimeFormatter.string(from: date)
+    }
+
+    /// 紧凑 token 数：1.2M / 86.2k / 932
+    static func tokens(_ count: Int) -> String {
+        let value = Double(count)
+        switch value {
+        case 1_000_000_000...:
+            return String(format: "%.2fB", value / 1_000_000_000)
+        case 1_000_000...:
+            return String(format: "%.2fM", value / 1_000_000)
+        case 1_000...:
+            return String(format: "%.1fk", value / 1_000)
+        default:
+            return "\(count)"
+        }
+    }
+
+    /// 美元估算：$1.23 / <$0.01
+    static func usd(_ value: Double) -> String {
+        if value > 0 && value < 0.01 { return "<$0.01" }
+        return String(format: "$%.2f", value)
     }
 
     /// "10 分钟前"；一分钟内显示"刚刚"。

@@ -25,9 +25,11 @@ struct PopoverRootView: View {
                     QuotaHeroView(account: account)
                 } else {
                     BalanceHeroView(account: account)
+                    PricingCardView(account: account)
                     TideChartView(account: account)
                     RunwayView(account: account)
                 }
+                UsageCardView()
                 PopoverFooterView(account: account)
             }
         }

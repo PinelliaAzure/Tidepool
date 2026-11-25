@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Providers") {
+            Section("服务与账号") {
                 ForEach(store.accounts) { account in
                     ProviderRowView(account: account)
                 }
@@ -32,6 +32,10 @@ struct SettingsView: View {
                 Text("关闭时使用单色模板图标，自动适配浅色 / 深色菜单栏。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Toggle("显示计价时段", isOn: pricingBinding)
+                Text("DeepSeek 工作日高峰为标准价，其余时段 5 折；闲时在鲸鱼右上角显示月亮。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("提醒") {
@@ -41,7 +45,22 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("本地用量") {
+                Toggle("扫描本地会话统计 Tokens", isOn: usageBinding)
+                HStack {
+                    Button("打开用量明细…") {
+                        UsageWindowController.shared.show()
+                    }
+                    .controlSize(.small)
+                    Spacer()
+                }
+                Text("读取 OpenCode / Claude Code / Codex 的本地会话，只统计 token 与费用，不上传。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("通用") {
+                Toggle("隐私模式（隐藏金额）", isOn: privacyBinding)
                 Toggle("登录时启动", isOn: launchBinding)
             }
 
@@ -50,13 +69,25 @@ struct SettingsView: View {
                     "版本",
                     value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
                 )
+                HStack {
+                    Button("重新运行首次引导…") {
+                        Prefs.onboardingDone = false
+                        OnboardingWindowController.shared.show(force: true)
+                    }
+                    .controlSize(.small)
+                    Button("检查更新…") {
+                        UpdateChecker.openReleases()
+                    }
+                    .controlSize(.small)
+                    Spacer()
+                }
                 Text("所有数据仅保存在本机，API Key 存储在 macOS 钥匙串中；应用不包含任何遥测。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 620, height: 560)
+        .frame(width: 660, height: 660)
     }
 
     private var addProviderMenu: some View {
@@ -104,6 +135,27 @@ struct SettingsView: View {
         )
     }
 
+    private var usageBinding: Binding<Bool> {
+        Binding(
+            get: { UsageStore.shared.enabled },
+            set: { UsageStore.shared.setEnabled($0) }
+        )
+    }
+
+    private var privacyBinding: Binding<Bool> {
+        Binding(
+            get: { store.privacyMode },
+            set: { store.setPrivacyMode($0) }
+        )
+    }
+
+    private var pricingBinding: Binding<Bool> {
+        Binding(
+            get: { store.showPricing },
+            set: { store.setShowPricing($0) }
+        )
+    }
+
     private var launchBinding: Binding<Bool> {
         Binding(
             get: { store.launchAtLogin },
@@ -117,14 +169,17 @@ struct ProviderRowView: View {
     let account: ProviderAccount
     @Environment(AppStore.self) private var store
     @State private var keyInput: String
+    @State private var hasStoredKey: Bool
 
     init(account: ProviderAccount) {
         self.account = account
-        _keyInput = State(initialValue: AppStore.shared.apiKey(for: account.id) ?? "")
+        let stored = AppStore.shared.apiKey(for: account.id)?.isEmpty == false
+        _hasStoredKey = State(initialValue: stored)
+        _keyInput = State(initialValue: "")
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Circle()
                     .fill(account.provider.brandColor)
@@ -132,6 +187,8 @@ struct ProviderRowView: View {
                 TextField("名称", text: nameBinding)
                     .textFieldStyle(.plain)
                     .font(.body.weight(.medium))
+                    .labelsHidden()
+                    .frame(maxWidth: 180)
                 Text(account.provider.kindDescription)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -144,11 +201,24 @@ struct ProviderRowView: View {
             }
 
             HStack(spacing: 8) {
-                SecureField(keyPlaceholder, text: $keyInput)
+                SecureField("", text: $keyInput)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12, design: .monospaced))
-                Button("保存并测试") {
+                    .labelsHidden()
+                    .overlay(alignment: .leading) {
+                        if keyInput.isEmpty {
+                            Text(keyPlaceholder)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 6)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                Button(hasStoredKey ? "替换" : "保存并测试") {
+                    guard !keyInput.isEmpty else { return }
                     store.setAPIKey(id: account.id, key: keyInput)
+                    hasStoredKey = true
+                    keyInput = ""
                     Task { await store.refresh(account.id, force: true) }
                 }
                 .disabled(keyInput.isEmpty)
@@ -238,6 +308,7 @@ struct ProviderRowView: View {
     // MARK: - 文案
 
     private var keyPlaceholder: String {
+        if hasStoredKey { return "已保存在钥匙串 · 输入新 Key 可替换" }
         switch account.provider {
         case .glm: return "粘贴 GLM Coding Plan API Key"
         case .kimiCode: return "粘贴 Kimi For Coding API Key（sk-…）"

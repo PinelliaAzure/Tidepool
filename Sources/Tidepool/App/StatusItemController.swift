@@ -17,6 +17,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         store.onMenuChanged = { [weak self] in self?.refreshStatusItem() }
         store.onOpenSettings = { [weak self] in self?.showSettings() }
+        store.onOpenUsage = { UsageWindowController.shared.show() }
 
         popover.behavior = .transient
         popover.animates = true
@@ -36,7 +37,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let tint: NSColor? = store.colorLogo
             ? (content.accent ?? ProviderID.deepseek.nsBrandColor)
             : nil
-        button.image = StatusIconRenderer.menuBarIcon(tint: tint, alert: content.alert)
+        button.image = StatusIconRenderer.menuBarIcon(
+            tint: tint,
+            alert: content.alert,
+            offPeak: content.offPeak
+        )
         button.title = content.text ?? ""
         button.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
         button.toolTip = content.tooltip
@@ -65,7 +70,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         guard let button = statusItem.button else { return }
         if popoverController == nil {
             let controller = NSHostingController(
-                rootView: AnyView(PopoverRootView().environment(store))
+                rootView: AnyView(
+                    PopoverRootView()
+                        .environment(store)
+                        .environment(UsageStore.shared)
+                )
             )
             controller.sizingOptions = [.preferredContentSize]
             popoverController = controller
@@ -82,6 +91,19 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let refresh = NSMenuItem(title: "立即刷新", action: #selector(refreshAll(_:)), keyEquivalent: "r")
         refresh.target = self
         menu.addItem(refresh)
+
+        let usage = NSMenuItem(title: "本地用量…", action: #selector(openUsage(_:)), keyEquivalent: "u")
+        usage.target = self
+        menu.addItem(usage)
+
+        let privacy = NSMenuItem(title: "隐私模式", action: #selector(togglePrivacy(_:)), keyEquivalent: "p")
+        privacy.target = self
+        privacy.state = store.privacyMode ? .on : .off
+        menu.addItem(privacy)
+
+        let updates = NSMenuItem(title: "检查更新…", action: #selector(checkUpdates(_:)), keyEquivalent: "")
+        updates.target = self
+        menu.addItem(updates)
 
         let settings = NSMenuItem(title: "Tidepool 设置…", action: #selector(openSettings(_:)), keyEquivalent: ",")
         settings.target = self
@@ -104,7 +126,22 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     @objc private func refreshAll(_ sender: Any?) {
-        Task { await store.refreshAll(force: true) }
+        Task {
+            await store.refreshAll(force: true)
+            UsageStore.shared.refresh()
+        }
+    }
+
+    @objc private func openUsage(_ sender: Any?) {
+        UsageWindowController.shared.show()
+    }
+
+    @objc private func togglePrivacy(_ sender: Any?) {
+        store.togglePrivacy()
+    }
+
+    @objc private func checkUpdates(_ sender: Any?) {
+        UpdateChecker.openReleases()
     }
 
     @objc private func openSettings(_ sender: Any?) {

@@ -37,6 +37,36 @@ enum Prefs {
         }
         set { defaults.set(newValue, forKey: "alerts.enabled") }
     }
+
+    /// 扫描本地会话统计用量，默认开启。
+    static var usageScanEnabled: Bool {
+        get {
+            if defaults.object(forKey: "usage.enabled") == nil { return true }
+            return defaults.bool(forKey: "usage.enabled")
+        }
+        set { defaults.set(newValue, forKey: "usage.enabled") }
+    }
+
+    /// 隐私模式：隐藏金额 / 项目等敏感信息。
+    static var privacyMode: Bool {
+        get { defaults.bool(forKey: "privacy.enabled") }
+        set { defaults.set(newValue, forKey: "privacy.enabled") }
+    }
+
+    /// 首次启动引导是否完成。
+    static var onboardingDone: Bool {
+        get { defaults.bool(forKey: "onboarding.done") }
+        set { defaults.set(newValue, forKey: "onboarding.done") }
+    }
+
+    /// 菜单栏是否显示计价时段（月亮角标 / tooltip）。
+    static var showPricing: Bool {
+        get {
+            if defaults.object(forKey: "pricing.showInMenuBar") == nil { return true }
+            return defaults.bool(forKey: "pricing.showInMenuBar")
+        }
+        set { defaults.set(newValue, forKey: "pricing.showInMenuBar") }
+    }
 }
 
 // MARK: - 本地持久化（Application Support/Tidepool）
@@ -54,6 +84,7 @@ struct PersistenceController {
 
     private var accountsURL: URL { directory.appendingPathComponent("accounts.json") }
     private var samplesURL: URL { directory.appendingPathComponent("samples.json") }
+    private var quotaSamplesURL: URL { directory.appendingPathComponent("quota-samples.json") }
 
     func loadAccounts() -> [ProviderAccount] {
         guard let raw = try? Data(contentsOf: accountsURL) else { return [] }
@@ -82,6 +113,25 @@ struct PersistenceController {
         let mapped = Dictionary(uniqueKeysWithValues: samples.map { ($0.key.uuidString, $0.value) })
         if let data = try? JSONEncoder().encode(mapped) {
             try? data.write(to: samplesURL, options: .atomic)
+        }
+    }
+
+    func loadQuotaSamples() -> [UUID: [QuotaSamplePoint]] {
+        guard let raw = try? Data(contentsOf: quotaSamplesURL),
+              let decoded = try? JSONDecoder().decode([String: [QuotaSamplePoint]].self, from: raw)
+        else { return [:] }
+        var result: [UUID: [QuotaSamplePoint]] = [:]
+        for (key, value) in decoded {
+            guard let id = UUID(uuidString: key) else { continue }
+            result[id] = value
+        }
+        return result
+    }
+
+    func saveQuotaSamples(_ samples: [UUID: [QuotaSamplePoint]]) {
+        let mapped = Dictionary(uniqueKeysWithValues: samples.map { ($0.key.uuidString, $0.value) })
+        if let data = try? JSONEncoder().encode(mapped) {
+            try? data.write(to: quotaSamplesURL, options: .atomic)
         }
     }
 }

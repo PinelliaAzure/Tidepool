@@ -42,6 +42,7 @@ struct RunwayView: View {
     }
 
     private func money(_ value: Double) -> String {
+        if store.privacyMode { return "•••" }
         let currency = store.snapshots[account.id]?.balance?.currency ?? "CNY"
         return TideFormatter.money(value, currency: currency, style: .hero)
     }

@@ -229,6 +229,29 @@ struct SamplePoint: Codable, Identifiable, Equatable {
     }
 }
 
+/// 额度剩余百分比的历史采样，用于「额度走势」。
+struct QuotaSamplePoint: Codable, Identifiable, Equatable {
+    var id: UUID
+    var date: Date
+    var kind: QuotaKind
+    var remainingPercent: Double
+
+    init(date: Date, kind: QuotaKind, remainingPercent: Double) {
+        self.id = UUID()
+        self.date = date
+        self.kind = kind
+        self.remainingPercent = remainingPercent
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        date = try container.decode(Date.self, forKey: .date)
+        kind = try container.decode(QuotaKind.self, forKey: .kind)
+        remainingPercent = try container.decode(Double.self, forKey: .remainingPercent)
+    }
+}
+
 struct AccountState: Equatable {
     var isRefreshing = false
     var lastSuccess: Date?

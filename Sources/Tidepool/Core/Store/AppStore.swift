@@ -16,12 +16,15 @@ final class AppStore {
     private(set) var colorLogo: Bool
     private(set) var menuBarStyle: MenuBarStyle
     private(set) var notificationsEnabled: Bool
+    private(set) var privacyMode: Bool
+    private(set) var showPricing: Bool
 
     /// 调试预览用：不写入真实偏好。
     var previewSelectedID: UUID?
 
     var onMenuChanged: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    var onOpenUsage: (() -> Void)?
 
     /// 菜单栏余额告警阈值（元）。
     static let lowBalanceThreshold: Double = 10
@@ -36,11 +39,18 @@ final class AppStore {
 
     private init() {
         let arguments = ProcessInfo.processInfo.arguments
-        let preview = arguments.contains("--preview") || arguments.contains("--preview-quota")
+        let preview = arguments.contains("--preview")
+            || arguments.contains("--preview-quota")
+            || arguments.contains("--preview-usage")
+            || arguments.contains("--preview-onboarding")
+            || arguments.contains("--preview-settings")
+            || arguments.contains("--demo-menu-bar")
         isPreview = preview
         colorLogo = Prefs.colorLogo
         menuBarStyle = Prefs.menuBarStyle
         notificationsEnabled = Prefs.notificationsEnabled
+        privacyMode = Prefs.privacyMode
+        showPricing = Prefs.showPricing
         keychain = KeychainStore()
         sampleStore = SampleStore(persistent: !preview)
         persistence = PersistenceController()
@@ -85,6 +95,10 @@ final class AppStore {
         sampleStore.samples(for: id)
     }
 
+    func quotaSamples(for id: UUID, kind: QuotaKind) -> [QuotaSamplePoint] {
+        sampleStore.quotaSamples(for: id, kind: kind)
+    }
+
     func apiKey(for id: UUID) -> String? {
         keychain.get(id)
     }
@@ -99,13 +113,14 @@ final class AppStore {
         var text: String?
         var accent: NSColor?
         var alert: Bool
+        var offPeak: Bool
         var tooltip: String
     }
 
     var menuBarContent: MenuBarContent {
         let visible = visibleAccounts
         guard !visible.isEmpty else {
-            return MenuBarContent(text: nil, accent: nil, alert: false, tooltip: "Tidepool — 点击添加 Provider")
+            return MenuBarContent(text: nil, accent: nil, alert: false, offPeak: false, tooltip: "Tidepool — 点击添加 Provider")
         }
 
         var text: String?
@@ -137,9 +152,15 @@ final class AppStore {
         let alert = visible.contains(where: isAlert)
         let summary = visible.compactMap { account -> String? in
             guard let value = compactValue(for: account) else { return nil }
-            return "\(account.name) \(value.text)"
+            return privacyMode ? account.name : "\(account.name) \(value.text)"
         }
         var tooltip = summary.isEmpty ? "Tidepool" : summary.joined(separator: " · ")
+
+        var pricing: PricingStatus?
+        if showPricing, let account = primary {
+            pricing = ProviderPricing.status(for: account.provider)
+        }
+
         if let account = primary {
             if let error = states[account.id]?.lastError {
                 tooltip += " · ⚠︎ \(error)"
@@ -147,11 +168,16 @@ final class AppStore {
                 tooltip += " · 更新于 \(TideFormatter.relative(ok) ?? "")"
             }
         }
+        if let pricing {
+            tooltip += " · \(pricing.currentLabel)"
+            tooltip += "（\(ProviderPricing.timeText(pricing.nextTransition, in: pricing.schedule)) \(pricing.nextLabel)）"
+        }
 
         return MenuBarContent(
             text: text,
             accent: primary?.provider.nsBrandColor,
             alert: alert,
+            offPeak: pricing?.isOffPeak ?? false,
             tooltip: tooltip
         )
     }
@@ -160,10 +186,13 @@ final class AppStore {
     private func compactValue(for account: ProviderAccount) -> (text: String, health: Double?)? {
         guard let snapshot = snapshots[account.id] else { return nil }
         if let balance = snapshot.balance {
+            if privacyMode {
+                return (TideFormatter.currencySymbol(for: balance.currency) + "•••", nil)
+            }
             return (TideFormatter.money(balance.total, currency: balance.currency, style: .menuBar), nil)
         }
         if let quota = snapshot.tightestQuota {
-            return (TideFormatter.percent(quota.remainingPercent), quota.remainingPercent)
+            return (privacyMode ? "•••" : TideFormatter.percent(quota.remainingPercent), quota.remainingPercent)
         }
         return nil
     }
@@ -241,6 +270,26 @@ final class AppStore {
         notify()
     }
 
+    func setPrivacyMode(_ enabled: Bool) {
+        privacyMode = enabled
+        Prefs.privacyMode = enabled
+        notify()
+    }
+
+    func togglePrivacy() {
+        setPrivacyMode(!privacyMode)
+    }
+
+    func setShowPricing(_ enabled: Bool) {
+        showPricing = enabled
+        Prefs.showPricing = enabled
+        notify()
+    }
+
+    func requestUsage() {
+        onOpenUsage?()
+    }
+
     /// 调整 Provider 顺序（设置窗口的上下移动）。
     func moveAccount(id: UUID, by offset: Int) {
         guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
@@ -304,6 +353,14 @@ final class AppStore {
             if let total = snapshot.balance?.total {
                 sampleStore.append(accountID: id, value: total, now: snapshot.fetchedAt)
             }
+            for quota in snapshot.quotas {
+                sampleStore.appendQuota(
+                    accountID: id,
+                    kind: quota.kind,
+                    percent: quota.remainingPercent,
+                    now: snapshot.fetchedAt
+                )
+            }
             if !isPreview {
                 NotificationManager.shared.evaluate(
                     account: account,
@@ -335,6 +392,14 @@ final class AppStore {
     private func notify() {
         onMenuChanged?()
     }
+
+#if DEBUG
+    /// 仅用于预览：不落 UserDefaults 的隐私模式开关。
+    func setPreviewPrivacy(_ enabled: Bool) {
+        privacyMode = enabled
+        notify()
+    }
+#endif
 
 #if DEBUG
     /// 仅用于 `--preview`：注入一份两账户的演示数据。
@@ -411,6 +476,14 @@ final class AppStore {
             let date = Calendar.current.date(byAdding: .day, value: -(kimiValues.count - 1 - index), to: now)!
             sampleStore.append(accountID: kimi.id, value: value, now: date)
         }
+
+        let glmWeekly: [Double] = [98, 95, 93, 91, 89, 88]
+        for (index, percent) in glmWeekly.enumerated() {
+            let date = Calendar.current.date(byAdding: .hour, value: -(glmWeekly.count - 1 - index) * 18, to: now)!
+            sampleStore.appendQuota(accountID: glm.id, kind: .weekly, percent: percent, now: date)
+        }
+        sampleStore.appendQuota(accountID: glm.id, kind: .fiveHour, percent: 84, now: now.addingTimeInterval(-5 * 3600))
+        sampleStore.appendQuota(accountID: glm.id, kind: .fiveHour, percent: 72, now: now.addingTimeInterval(-120))
 
         notify()
     }

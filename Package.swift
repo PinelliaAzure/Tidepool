@@ -23,7 +23,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Tidepool",
-            path: "Sources/Tidepool"
+            path: "Sources/Tidepool",
+            linkerSettings: [
+                .linkedLibrary("sqlite3")
+            ]
         ),
         .testTarget(
             name: "TidepoolTests",

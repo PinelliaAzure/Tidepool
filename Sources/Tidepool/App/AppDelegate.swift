@@ -9,7 +9,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         AppStore.shared.bootstrap()
+        UsageStore.shared.start()
+
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--demo-menu-bar") {
+            AppStore.shared.seedPreviewData()
+            UsageStore.shared.seedPreviewData()
+            Prefs.onboardingDone = true
+        }
+#endif
+
         let controller = StatusItemController(store: AppStore.shared)
         statusController = controller
+
+        if AppStore.shared.accounts.isEmpty && !Prefs.onboardingDone {
+            OnboardingWindowController.shared.show()
+        }
     }
 }

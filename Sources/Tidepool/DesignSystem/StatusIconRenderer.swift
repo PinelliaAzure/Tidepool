@@ -3,8 +3,14 @@ import AppKit
 /// 程序化渲染的鲸鱼剪影（Template / 品牌色两种模式）。
 /// 视觉基准：100 × 64 画布，鲸头朝右（朝向后面的金额文字）。
 enum StatusIconRenderer {
-    /// 菜单栏图标：可选品牌色（nil 则为单色模板图，自动适配明暗）与告警角标。
-    static func menuBarIcon(size: CGFloat = 18, tint: NSColor? = nil, alert: Bool = false) -> NSImage {
+    /// 菜单栏图标：可选品牌色（nil 则为单色模板图，自动适配明暗）、
+    /// 低余额角标与闲时月亮角标。
+    static func menuBarIcon(
+        size: CGFloat = 18,
+        tint: NSColor? = nil,
+        alert: Bool = false,
+        offPeak: Bool = false
+    ) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
         image.isTemplate = (tint == nil)
         image.lockFocus()
@@ -18,12 +24,17 @@ enum StatusIconRenderer {
         )
         drawWhale(in: whaleFrame, color: tint ?? .black)
 
+        let badgeColor = tint ?? .black
+        if offPeak {
+            drawMoon(size: size, color: badgeColor)
+        }
+
         if alert {
             let dotSize = size * 0.26
             let dot = NSBezierPath(
                 ovalIn: NSRect(
                     x: size - dotSize,
-                    y: size - dotSize,
+                    y: 0,
                     width: dotSize,
                     height: dotSize
                 )
@@ -32,6 +43,35 @@ enum StatusIconRenderer {
             dot.fill()
         }
         return image
+    }
+
+    /// 右上角的小月牙：闲时（非高峰）计价。
+    private static func drawMoon(size: CGFloat, color: NSColor) {
+        let radius = size * 0.165
+        let center = NSPoint(x: size * 0.795, y: size * 0.795)
+        let outer = NSBezierPath(
+            ovalIn: NSRect(
+                x: center.x - radius,
+                y: center.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            )
+        )
+        let innerRadius = radius * 0.94
+        let inner = NSBezierPath(
+            ovalIn: NSRect(
+                x: center.x - innerRadius + radius * 0.62,
+                y: center.y - innerRadius + radius * 0.26,
+                width: innerRadius * 2,
+                height: innerRadius * 2
+            )
+        )
+        let crescent = NSBezierPath()
+        crescent.windingRule = .evenOdd
+        crescent.append(outer)
+        crescent.append(inner)
+        color.setFill()
+        crescent.fill()
     }
 
     /// 大尺寸鲸鱼（空态插画等）。

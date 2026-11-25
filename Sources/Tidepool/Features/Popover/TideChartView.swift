@@ -84,9 +84,13 @@ struct TideChartView: View {
                     AxisGridLine().foregroundStyle(Color.primary.opacity(0.06))
                     AxisValueLabel {
                         if let amount = value.as(Double.self) {
-                            Text(TideFormatter.money(amount, currency: currencyCode, style: .axis))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            Text(
+                                store.privacyMode
+                                    ? "•••"
+                                    : TideFormatter.money(amount, currency: currencyCode, style: .axis)
+                            )
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         }
                     }
                 }

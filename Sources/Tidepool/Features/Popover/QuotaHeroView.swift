@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 /// 额度型 Provider（GLM / Kimi Code）的 Hero：
@@ -34,6 +35,9 @@ struct QuotaHeroView: View {
                 }
                 if let monthly = quotas.first(where: { $0.kind == .monthly }) {
                     monthlyRow(monthly)
+                }
+                if let history = weeklyHistory {
+                    historyChart(history)
                 }
             }
 
@@ -155,6 +159,66 @@ struct QuotaHeroView: View {
             }
             .frame(height: 4)
         }
+    }
+
+    private func historyChart(_ points: [QuotaSamplePoint]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("本周额度走势")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("近 7 天")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Chart(points) { point in
+                AreaMark(
+                    x: .value("时间", point.date),
+                    y: .value("剩余", point.remainingPercent)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [account.provider.brandColor.opacity(0.24), account.provider.brandColor.opacity(0.02)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                LineMark(
+                    x: .value("时间", point.date),
+                    y: .value("剩余", point.remainingPercent)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(account.provider.brandColor)
+                .lineStyle(StrokeStyle(lineWidth: 1.4, lineCap: .round))
+            }
+            .chartYScale(domain: 0...100)
+            .chartXAxis(.hidden)
+            .chartYAxis {
+                AxisMarks(position: .trailing, values: [0, 50, 100]) { value in
+                    AxisValueLabel {
+                        if let percent = value.as(Double.self) {
+                            Text("\(Int(percent))%")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            }
+            .frame(height: 58)
+        }
+        .padding(.top, 2)
+    }
+
+    private var weeklyHistory: [QuotaSamplePoint]? {
+        guard let snapshot = store.snapshots[account.id],
+              snapshot.quotas.contains(where: { $0.kind == .weekly }) else { return nil }
+        let cutoff = Date().addingTimeInterval(-7 * 86_400)
+        let points = store.quotaSamples(for: account.id, kind: .weekly).filter { $0.date >= cutoff }
+        return points.count >= 2 ? points : nil
     }
 
     private var refreshButton: some View {
