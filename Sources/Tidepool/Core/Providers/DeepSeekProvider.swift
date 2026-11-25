@@ -26,7 +26,8 @@ struct DeepSeekProvider: BalanceProviding {
                 toppedUp: Double(info.toppedUpBalance),
                 isAvailable: response.isAvailable ?? true
             ),
-            quotas: []
+            quotas: [],
+            planName: nil
         )
     }
 }

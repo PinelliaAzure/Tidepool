@@ -14,6 +14,11 @@ final class AppStore {
     private(set) var snapshots: [UUID: ProviderSnapshot] = [:]
     private(set) var states: [UUID: AccountState] = [:]
     private(set) var colorLogo: Bool
+    private(set) var menuBarStyle: MenuBarStyle
+    private(set) var notificationsEnabled: Bool
+
+    /// 调试预览用：不写入真实偏好。
+    var previewSelectedID: UUID?
 
     var onMenuChanged: (() -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -30,9 +35,12 @@ final class AppStore {
     private let scheduler = RefreshScheduler()
 
     private init() {
-        let preview = ProcessInfo.processInfo.arguments.contains("--preview")
+        let arguments = ProcessInfo.processInfo.arguments
+        let preview = arguments.contains("--preview") || arguments.contains("--preview-quota")
         isPreview = preview
         colorLogo = Prefs.colorLogo
+        menuBarStyle = Prefs.menuBarStyle
+        notificationsEnabled = Prefs.notificationsEnabled
         keychain = KeychainStore()
         sampleStore = SampleStore(persistent: !preview)
         persistence = PersistenceController()
@@ -49,6 +57,9 @@ final class AppStore {
     /// 启动后台调度（App 启动完成后调用一次）。
     func bootstrap() {
         scheduler.attach(self)
+        if notificationsEnabled {
+            NotificationManager.shared.requestAuthorization()
+        }
     }
 
     // MARK: - 派生数据
@@ -59,6 +70,10 @@ final class AppStore {
 
     var selectedAccount: ProviderAccount? {
         let visible = visibleAccounts
+        if isPreview, let id = previewSelectedID,
+           let match = visible.first(where: { $0.id == id }) {
+            return match
+        }
         if let id = Prefs.selectedAccountID,
            let match = visible.first(where: { $0.id == id }) {
             return match
@@ -88,43 +103,77 @@ final class AppStore {
     }
 
     var menuBarContent: MenuBarContent {
-        guard let account = selectedAccount else {
+        let visible = visibleAccounts
+        guard !visible.isEmpty else {
             return MenuBarContent(text: nil, accent: nil, alert: false, tooltip: "Tidepool — 点击添加 Provider")
         }
-        let snapshot = snapshots[account.id]
-        let state = states[account.id]
-        var tooltip = account.name
-        var alert = false
-        var text: String?
 
-        if let balance = snapshot?.balance {
-            text = TideFormatter.money(balance.total, currency: balance.currency, style: .menuBar)
-            tooltip += " · 余额 \(TideFormatter.money(balance.total, currency: balance.currency, style: .hero))"
-            if !balance.isAvailable || balance.total <= Self.lowBalanceThreshold {
-                alert = true
+        var text: String?
+        var primary: ProviderAccount?
+
+        switch menuBarStyle {
+        case .single:
+            primary = selectedAccount
+            if let account = primary {
+                text = compactValue(for: account)?.text
+                    ?? (states[account.id]?.lastError != nil ? "…" : nil)
             }
-        } else if !(snapshot?.quotas.isEmpty ?? true) {
-            // 额度型 Provider（GLM / Kimi Code，M1 接入）
-            if let tightest = snapshot?.quotas.min(by: { $0.remainingPercent < $1.remainingPercent }) {
-                text = TideFormatter.percent(tightest.remainingPercent)
-                if tightest.remainingPercent <= 10 { alert = true }
+        case .all:
+            primary = selectedAccount
+            let values = visible.compactMap { compactValue(for: $0)?.text }
+            text = values.isEmpty ? nil : values.joined(separator: " · ")
+        case .tightest:
+            let quotaAccounts = visible.filter { !(snapshots[$0.id]?.quotas.isEmpty ?? true) }
+            let candidates = quotaAccounts.isEmpty ? visible : quotaAccounts
+            primary = candidates.min { lhs, rhs in
+                (compactValue(for: lhs)?.health ?? 100.5) < (compactValue(for: rhs)?.health ?? 100.5)
             }
-        } else if state?.lastError != nil {
-            text = "…"
+            if let account = primary {
+                text = compactValue(for: account)?.text
+                    ?? (states[account.id]?.lastError != nil ? "…" : nil)
+            }
         }
 
-        if let error = state?.lastError {
-            tooltip += " · ⚠︎ \(error)"
-        } else if let ok = state?.lastSuccess {
-            tooltip += " · 更新于 \(TideFormatter.relative(ok) ?? "")"
+        let alert = visible.contains(where: isAlert)
+        let summary = visible.compactMap { account -> String? in
+            guard let value = compactValue(for: account) else { return nil }
+            return "\(account.name) \(value.text)"
+        }
+        var tooltip = summary.isEmpty ? "Tidepool" : summary.joined(separator: " · ")
+        if let account = primary {
+            if let error = states[account.id]?.lastError {
+                tooltip += " · ⚠︎ \(error)"
+            } else if let ok = states[account.id]?.lastSuccess {
+                tooltip += " · 更新于 \(TideFormatter.relative(ok) ?? "")"
+            }
         }
 
         return MenuBarContent(
             text: text,
-            accent: account.provider.nsBrandColor,
+            accent: primary?.provider.nsBrandColor,
             alert: alert,
             tooltip: tooltip
         )
+    }
+
+    /// 单个账户在菜单栏里的紧凑值；额度型取最紧张的窗口。
+    private func compactValue(for account: ProviderAccount) -> (text: String, health: Double?)? {
+        guard let snapshot = snapshots[account.id] else { return nil }
+        if let balance = snapshot.balance {
+            return (TideFormatter.money(balance.total, currency: balance.currency, style: .menuBar), nil)
+        }
+        if let quota = snapshot.tightestQuota {
+            return (TideFormatter.percent(quota.remainingPercent), quota.remainingPercent)
+        }
+        return nil
+    }
+
+    private func isAlert(_ account: ProviderAccount) -> Bool {
+        guard let snapshot = snapshots[account.id] else { return false }
+        if let balance = snapshot.balance {
+            return !balance.isAvailable || balance.total <= Self.lowBalanceThreshold
+        }
+        return snapshot.quotas.contains { $0.remainingPercent <= 10 }
     }
 
     // MARK: - 账户管理
@@ -174,6 +223,34 @@ final class AppStore {
     func setColorLogo(_ enabled: Bool) {
         colorLogo = enabled
         Prefs.colorLogo = enabled
+        notify()
+    }
+
+    func setMenuBarStyle(_ style: MenuBarStyle) {
+        menuBarStyle = style
+        Prefs.menuBarStyle = style
+        notify()
+    }
+
+    func setNotificationsEnabled(_ enabled: Bool) {
+        notificationsEnabled = enabled
+        Prefs.notificationsEnabled = enabled
+        if enabled {
+            NotificationManager.shared.requestAuthorization()
+        }
+        notify()
+    }
+
+    /// 调整 Provider 顺序（设置窗口的上下移动）。
+    func moveAccount(id: UUID, by offset: Int) {
+        guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard accounts.indices.contains(target) else { return }
+        accounts.swapAt(index, target)
+        for i in accounts.indices {
+            accounts[i].sortOrder = i
+        }
+        persistAccounts()
         notify()
     }
 
@@ -227,6 +304,13 @@ final class AppStore {
             if let total = snapshot.balance?.total {
                 sampleStore.append(accountID: id, value: total, now: snapshot.fetchedAt)
             }
+            if !isPreview {
+                NotificationManager.shared.evaluate(
+                    account: account,
+                    snapshot: snapshot,
+                    enabled: notificationsEnabled
+                )
+            }
             notify()
             return true
         } catch {
@@ -260,9 +344,11 @@ final class AppStore {
         let now = Date()
         let deepseek = ProviderAccount(provider: .deepseek, name: "DeepSeek", sortOrder: 0)
         let kimi = ProviderAccount(provider: .moonshot, name: "Kimi", sortOrder: 1)
-        accounts = [deepseek, kimi]
+        let glm = ProviderAccount(provider: .glm, name: "GLM", sortOrder: 2)
+        accounts = [deepseek, kimi, glm]
         states[deepseek.id] = AccountState(isRefreshing: false, lastSuccess: now, lastError: nil)
         states[kimi.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-420), lastError: nil)
+        states[glm.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-120), lastError: nil)
 
         snapshots[deepseek.id] = ProviderSnapshot(
             fetchedAt: now,
@@ -273,7 +359,8 @@ final class AppStore {
                 toppedUp: 32.5,
                 isAvailable: true
             ),
-            quotas: []
+            quotas: [],
+            planName: nil
         )
         snapshots[kimi.id] = ProviderSnapshot(
             fetchedAt: now.addingTimeInterval(-420),
@@ -284,8 +371,35 @@ final class AppStore {
                 toppedUp: 110,
                 isAvailable: true
             ),
-            quotas: []
+            quotas: [],
+            planName: nil
         )
+        snapshots[glm.id] = ProviderSnapshot(
+            fetchedAt: now.addingTimeInterval(-120),
+            balance: nil,
+            quotas: [
+                QuotaWindow(
+                    kind: .fiveHour,
+                    remainingPercent: 72,
+                    resetDate: now.addingTimeInterval(2 * 3600 + 18 * 60)
+                ),
+                QuotaWindow(
+                    kind: .weekly,
+                    remainingPercent: 88,
+                    resetDate: now.addingTimeInterval(4 * 86_400 + 6 * 3600)
+                ),
+                QuotaWindow(
+                    kind: .monthly,
+                    remainingPercent: 64,
+                    resetDate: now.addingTimeInterval(12 * 86_400)
+                )
+            ],
+            planName: "GLM Coding Plan · Pro"
+        )
+
+        previewSelectedID = ProcessInfo.processInfo.arguments.contains("--preview-quota")
+            ? glm.id
+            : deepseek.id
 
         let deepseekValues: [Double] = [78, 74, 69, 63, 58, 50, 46, 42.5]
         for (index, value) in deepseekValues.enumerated() {

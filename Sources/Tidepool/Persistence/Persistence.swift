@@ -22,6 +22,21 @@ enum Prefs {
         get { defaults.bool(forKey: "menu.colorLogo") }
         set { defaults.set(newValue, forKey: "menu.colorLogo") }
     }
+
+    /// 菜单栏展示策略：当前 / 全部 / 最紧张。
+    static var menuBarStyle: MenuBarStyle {
+        get { MenuBarStyle(rawValue: defaults.string(forKey: "menu.style") ?? "") ?? .single }
+        set { defaults.set(newValue.rawValue, forKey: "menu.style") }
+    }
+
+    /// 低余额 / 低额度通知，默认开启。
+    static var notificationsEnabled: Bool {
+        get {
+            if defaults.object(forKey: "alerts.enabled") == nil { return true }
+            return defaults.bool(forKey: "alerts.enabled")
+        }
+        set { defaults.set(newValue, forKey: "alerts.enabled") }
+    }
 }
 
 // MARK: - 本地持久化（Application Support/Tidepool）

@@ -20,7 +20,8 @@ if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
 #endif
 
 #if DEBUG
-if ProcessInfo.processInfo.arguments.contains("--preview") {
+if ProcessInfo.processInfo.arguments.contains("--preview")
+    || ProcessInfo.processInfo.arguments.contains("--preview-quota") {
     MainActor.assumeIsolated {
         PreviewRunner.run()
         exit(0)

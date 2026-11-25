@@ -22,12 +22,26 @@ enum ProviderError: LocalizedError {
 
 // MARK: - HTTP 客户端
 
+enum AuthStyle {
+    case bearer
+    case raw
+    case none
+}
+
 struct APIClient {
-    func getJSON(url: URL, apiKey: String) async throws -> Data {
+    func getJSON(url: URL, apiKey: String, authStyle: AuthStyle = .bearer) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
         request.httpMethod = "GET"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        switch authStyle {
+        case .bearer:
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        case .raw:
+            request.setValue(apiKey, forHTTPHeaderField: "Authorization")
+        case .none:
+            break
+        }
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         do {
@@ -64,7 +78,8 @@ enum ProviderRegistry {
         switch provider {
         case .deepseek: return DeepSeekProvider()
         case .moonshot: return MoonshotProvider()
-        case .kimiCode, .glm: return UnsupportedProvider(provider: provider)
+        case .kimiCode: return KimiCodeProvider()
+        case .glm: return GLMProvider()
         }
     }
 }

@@ -33,11 +33,24 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     var brandColor: Color { Color(hex: brandHex) }
     var nsBrandColor: NSColor { NSColor(hex: brandHex) }
 
-    /// M0 可直接添加的 Provider；其余接口在 M1 接入。
-    var isConfigurable: Bool {
+    /// M1：两类额度渠道已接入。
+    var isConfigurable: Bool { true }
+
+    /// 渠道类型说明（设置窗口用）。
+    var kindDescription: String {
         switch self {
-        case .deepseek, .moonshot: return true
-        case .kimiCode, .glm: return false
+        case .deepseek: return "开放平台 API 余额"
+        case .moonshot: return "开放平台 API 余额"
+        case .kimiCode: return "Kimi For Coding 套餐额度"
+        case .glm: return "GLM Coding Plan 额度"
+        }
+    }
+
+    /// 套餐额度型 Provider：面板展示圆环而不是余额。
+    var isQuotaProvider: Bool {
+        switch self {
+        case .kimiCode, .glm: return true
+        case .deepseek, .moonshot: return false
         }
     }
 
@@ -120,10 +133,35 @@ struct BalanceSnapshot: Codable, Equatable {
     var isAvailable: Bool
 }
 
-enum QuotaKind: String, Codable {
+enum QuotaKind: String, Codable, CaseIterable {
     case fiveHour
     case weekly
     case monthly
+
+    var displayName: String {
+        switch self {
+        case .fiveHour: return "5 小时"
+        case .weekly: return "本周"
+        case .monthly: return "本月"
+        }
+    }
+
+    /// 该额度窗口的时长，用于「时间进度 vs 用量进度」节奏判断。
+    var windowLength: TimeInterval? {
+        switch self {
+        case .fiveHour: return 5 * 3600
+        case .weekly: return 7 * 86_400
+        case .monthly: return 30 * 86_400
+        }
+    }
+
+    var sortOrder: Int {
+        switch self {
+        case .fiveHour: return 0
+        case .weekly: return 1
+        case .monthly: return 2
+        }
+    }
 }
 
 struct QuotaWindow: Codable, Equatable, Identifiable {
@@ -131,6 +169,10 @@ struct QuotaWindow: Codable, Equatable, Identifiable {
     var remainingPercent: Double
     var resetDate: Date?
     var id: String { kind.rawValue }
+
+    var remainingFraction: Double {
+        min(max(remainingPercent / 100, 0), 1)
+    }
 }
 
 /// 一次刷新得到的完整快照：余额与套餐额度可并存。
@@ -138,6 +180,33 @@ struct ProviderSnapshot: Codable, Equatable {
     var fetchedAt: Date
     var balance: BalanceSnapshot?
     var quotas: [QuotaWindow]
+    /// 套餐名称，如 "GLM Coding Plan · Pro" / "Kimi Code"。
+    var planName: String?
+
+    var tightestQuota: QuotaWindow? {
+        quotas.min { $0.remainingPercent < $1.remainingPercent }
+    }
+
+    var sortedQuotas: [QuotaWindow] {
+        quotas.sorted { $0.kind.sortOrder < $1.kind.sortOrder }
+    }
+}
+
+/// 菜单栏展示策略。
+enum MenuBarStyle: String, CaseIterable, Identifiable {
+    case single
+    case all
+    case tightest
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .single: return "当前 Provider"
+        case .all: return "全部（紧凑）"
+        case .tightest: return "最紧张的一项"
+        }
+    }
 }
 
 /// 余额水位的历史采样点，用于潮汐图与 runway 计算。

@@ -61,6 +61,29 @@ enum TideFormatter {
         return String(format: "%.0f 分钟", hours * 60)
     }
 
+    /// 额度重置倒计时 → "2 小时 18 分后重置" / "3 天 4 小时后重置"。
+    static func countdown(to date: Date, now: Date = Date()) -> String {
+        let interval = date.timeIntervalSince(now)
+        guard interval > 0 else { return "已重置" }
+        let totalMinutes = Int((interval / 60).rounded(.up))
+        if totalMinutes >= 1440 {
+            let days = totalMinutes / 1440
+            let hours = (totalMinutes % 1440) / 60
+            return hours > 0 ? "\(days) 天 \(hours) 小时后重置" : "\(days) 天后重置"
+        }
+        if totalMinutes >= 60 {
+            let hours = totalMinutes / 60
+            let minutes = totalMinutes % 60
+            return minutes > 0 ? "\(hours) 小时 \(minutes) 分后重置" : "\(hours) 小时后重置"
+        }
+        return "\(totalMinutes) 分钟后重置"
+    }
+
+    /// "11月26日 14:30"
+    static func resetDateText(_ date: Date) -> String {
+        shortDateTimeFormatter.string(from: date)
+    }
+
     /// "10 分钟前"；一分钟内显示"刚刚"。
     static func relative(_ date: Date?, now: Date = Date()) -> String? {
         guard let date else { return nil }
@@ -87,6 +110,13 @@ enum TideFormatter {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: "zh-Hans")
+        return formatter
+    }()
+
+    private static let shortDateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh-Hans")
+        formatter.dateFormat = "M月d日 HH:mm"
         return formatter
     }()
 }

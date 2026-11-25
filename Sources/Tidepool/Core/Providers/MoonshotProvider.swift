@@ -26,7 +26,8 @@ struct MoonshotProvider: BalanceProviding {
                 toppedUp: payload.cashBalance,
                 isAvailable: payload.availableBalance > 0
             ),
-            quotas: []
+            quotas: [],
+            planName: nil
         )
     }
 }

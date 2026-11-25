@@ -21,9 +21,13 @@ struct PopoverRootView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerRow
             if let account = store.selectedAccount {
-                BalanceHeroView(account: account)
-                TideChartView(account: account)
-                RunwayView(account: account)
+                if account.provider.isQuotaProvider {
+                    QuotaHeroView(account: account)
+                } else {
+                    BalanceHeroView(account: account)
+                    TideChartView(account: account)
+                    RunwayView(account: account)
+                }
                 PopoverFooterView(account: account)
             }
         }
