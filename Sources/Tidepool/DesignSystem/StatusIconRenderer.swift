@@ -1,0 +1,115 @@
+import AppKit
+
+/// 程序化渲染的鲸鱼剪影（Template / 品牌色两种模式）。
+/// 视觉基准：100 × 64 画布，鲸头朝右（朝向后面的金额文字）。
+enum StatusIconRenderer {
+    /// 菜单栏图标：可选品牌色（nil 则为单色模板图，自动适配明暗）与告警角标。
+    static func menuBarIcon(size: CGFloat = 18, tint: NSColor? = nil, alert: Bool = false) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size))
+        image.isTemplate = (tint == nil)
+        image.lockFocus()
+        defer { image.unlockFocus() }
+
+        let whaleFrame = NSRect(
+            x: 0,
+            y: size * 0.14,
+            width: size * 0.82,
+            height: size * 0.72
+        )
+        drawWhale(in: whaleFrame, color: tint ?? .black)
+
+        if alert {
+            let dotSize = size * 0.26
+            let dot = NSBezierPath(
+                ovalIn: NSRect(
+                    x: size - dotSize,
+                    y: size - dotSize,
+                    width: dotSize,
+                    height: dotSize
+                )
+            )
+            (tint == nil ? NSColor.black : NSColor.systemRed).setFill()
+            dot.fill()
+        }
+        return image
+    }
+
+    /// 大尺寸鲸鱼（空态插画等）。
+    static func whaleIcon(size: CGFloat, tint: NSColor) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size * 0.7))
+        image.isTemplate = false
+        image.lockFocus()
+        defer { image.unlockFocus() }
+        drawWhale(in: NSRect(x: 0, y: 0, width: size, height: size * 0.7), color: tint)
+        return image
+    }
+
+    private static func drawWhale(in rect: NSRect, color: NSColor) {
+        let path = NSBezierPath()
+        path.windingRule = .evenOdd
+
+        // 身体：从右侧鼻尖起笔，沿头顶、背部到尾柄
+        path.move(to: NSPoint(x: 92, y: 34))
+        path.curve(
+            to: NSPoint(x: 58, y: 7),
+            controlPoint1: NSPoint(x: 88, y: 16),
+            controlPoint2: NSPoint(x: 74, y: 5)
+        )
+        path.curve(
+            to: NSPoint(x: 28, y: 12),
+            controlPoint1: NSPoint(x: 45, y: 8),
+            controlPoint2: NSPoint(x: 36, y: 9)
+        )
+        path.curve(
+            to: NSPoint(x: 21, y: 20),
+            controlPoint1: NSPoint(x: 25, y: 13),
+            controlPoint2: NSPoint(x: 22, y: 16)
+        )
+        // 上尾鳍
+        path.curve(
+            to: NSPoint(x: 7, y: 6),
+            controlPoint1: NSPoint(x: 17, y: 14),
+            controlPoint2: NSPoint(x: 12, y: 8)
+        )
+        path.curve(
+            to: NSPoint(x: 24, y: 27),
+            controlPoint1: NSPoint(x: 10, y: 15),
+            controlPoint2: NSPoint(x: 17, y: 24)
+        )
+        // 下尾鳍
+        path.curve(
+            to: NSPoint(x: 6, y: 46),
+            controlPoint1: NSPoint(x: 13, y: 33),
+            controlPoint2: NSPoint(x: 8, y: 40)
+        )
+        path.curve(
+            to: NSPoint(x: 27, y: 34),
+            controlPoint1: NSPoint(x: 13, y: 42),
+            controlPoint2: NSPoint(x: 19, y: 37)
+        )
+        // 腹部回到鼻尖
+        path.curve(
+            to: NSPoint(x: 92, y: 34),
+            controlPoint1: NSPoint(x: 48, y: 52),
+            controlPoint2: NSPoint(x: 74, y: 52)
+        )
+        path.close()
+
+        // 眼睛（镂空）
+        let eye = NSBezierPath(ovalIn: NSRect(x: 69, y: 24, width: 5.5, height: 5.5))
+        path.append(eye)
+
+        let transform = AffineTransform(
+            m11: rect.width / 100,
+            m12: 0,
+            m21: 0,
+            m22: rect.height / 64,
+            tX: rect.minX,
+            tY: rect.minY
+        )
+        path.transform(using: transform)
+
+        color.setFill()
+        path.fill()
+    }
+}
