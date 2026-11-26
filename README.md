@@ -85,7 +85,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.10.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.11.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -100,7 +100,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 77 个单元测试（Swift Testing）
+make test         # 83 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -131,8 +131,8 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | GLM / Z.ai | Coding Plan 5h / 周 / MCP 月度额度 | `GET https://open.bigmodel.cn/api/monitor/usage/quota/limit`（国际 `api.z.ai`） | ⚠️ 非公开只读接口 |
 | OpenRouter | API credits（USD） | `GET https://openrouter.ai/api/v1/credits` | ✅ 官方接口 |
 | SiliconFlow | 账户余额（USD） | `GET https://api.siliconflow.com/v1/user/info` | ⚠️ 国内站 `.cn` 接口 2026-08-14 下线；国际站可用 |
-| 火山方舟 | Coding Plan 5h / 周 / 月 | 本机 `arkcli`（登录后） | ✅ 官方 CLI |
-| 阿里云百炼 | Coding Plan 5h / 周 / 月 | 本机 `bl`（登录后） | ✅ 官方 CLI |
+| 火山方舟 | Agent Plan / Coding Plan 5h / 周 / 月 | 本机 `arkcli`（登录后） | ✅ 官方 CLI |
+| 阿里云百炼 | Coding Plan / Token Plan 额度 | 本机 `bl`（登录后） | ✅ 官方 CLI |
 | 阿里云（余额） | 账户可用余额（CNY） | `business.aliyuncs.com` + RPC 签名（可选 AccessKey） | ✅ 官方 API |
 | 腾讯云 | 账户余额（CNY） | `billing.tencentcloudapi.com` + TC3 签名 | ✅ 官方 API |
 | 华为云 | 账户余额（CNY） | `bss.myhuaweicloud.com` + AK/SK 签名 | ✅ 官方 API |

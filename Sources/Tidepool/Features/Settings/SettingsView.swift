@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.10"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.11"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -748,8 +748,8 @@ struct ProviderRowView: View {
             )
         case .alibaba:
             return T(
-                "可选：填阿里云 AccessKey ID / Secret 读取账户余额（BSS）。留空则用 bl 读 Coding Plan；密钥只保存在钥匙串。",
-                "Optional: enter an Alibaba Cloud AccessKey ID/Secret to read account balance (BSS). Leave blank to use bl for Coding Plan. Keys stay in the Keychain."
+                "可选：填阿里云 AccessKey ID / Secret 读取账户余额（BSS）。留空则用 bl 读 Coding Plan / Token Plan；密钥只保存在钥匙串。",
+                "Optional: enter an Alibaba Cloud AccessKey ID/Secret to read account balance (BSS). Leave blank to use bl for Coding Plan / Token Plan. Keys stay in the Keychain."
             )
         default:
             return ""

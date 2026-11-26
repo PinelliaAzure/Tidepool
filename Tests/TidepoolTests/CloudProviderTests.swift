@@ -37,6 +37,61 @@ struct CloudProviderTests {
         #expect(five.resetDate != nil)
     }
 
+    @Test func volcengineAgentPlan() throws {
+        let json = """
+        {
+          "viewer": { "auth_method": "sso" },
+          "items": [
+            {
+              "product": "agent-plan",
+              "edition": "personal",
+              "tier": "small",
+              "subscribed": true,
+              "periods": [
+                { "label": "5h", "total": 2000, "percent": 0 },
+                { "label": "weekly", "total": 7000, "percent": 0, "reset_at": "2026-11-30T00:00:00+08:00" },
+                { "label": "monthly", "total": 20000, "percent": 0, "reset_at": "2026-12-26T23:59:59+08:00" }
+              ]
+            },
+            {
+              "product": "agent-plan-team",
+              "edition": "team",
+              "subscribed": true,
+              "error": "no seat bound to caller",
+              "periods": []
+            },
+            { "product": "coding-plan", "subscribed": false, "periods": [] }
+          ]
+        }
+        """
+        let snapshot = try VolcengineCLIProvider.parse(try object(json))
+        #expect(snapshot.planName == "Ark Agent Plan · Small")
+        #expect(snapshot.quotas.count == 3)
+        #expect(snapshot.quotas.allSatisfy { abs($0.remainingPercent - 100) < 0.001 })
+        let weekly = try #require(snapshot.quotas.first { $0.kind == .weekly })
+        #expect(weekly.resetDate != nil)
+    }
+
+    @Test func volcengineAgentPlanUsedTotalFallback() throws {
+        let json = """
+        {
+          "items": [
+            {
+              "product": "agent-plan",
+              "edition": "personal",
+              "subscribed": true,
+              "periods": [
+                { "label": "5h", "used": 500, "total": 2000 }
+              ]
+            }
+          ]
+        }
+        """
+        let snapshot = try VolcengineCLIProvider.parse(try object(json))
+        let five = try #require(snapshot.quotas.first)
+        #expect(abs(five.remainingPercent - 75) < 0.001)
+    }
+
     @Test func volcengineNoSubscription() throws {
         let json = """
         { "items": [ { "product": "coding-plan", "subscribed": false } ] }
@@ -268,5 +323,53 @@ struct CLIIntegrationTests {
         #expect(root["ok"] as? Bool == false)
         let error = try #require(root["error"] as? [String: Any])
         #expect(error["message"] as? String == "not configured")
+    }
+}
+
+@Suite("阿里云 Token Plan")
+struct AlibabaTokenPlanTests {
+    @Test func tokenPlanMonthly() throws {
+        let json = """
+        {
+          "per1MonthPercentage": 0.25,
+          "per1MonthResetTime": 1790784000000,
+          "hasQuotaData": true
+        }
+        """
+        let snapshot = try AlibabaCLIProvider.parseTokenPlan(try JSONSerialization.jsonObject(with: Data(json.utf8)))
+        #expect(snapshot.planName == "Bailian Token Plan")
+        let monthly = try #require(snapshot.quotas.first { $0.kind == .monthly })
+        #expect(abs(monthly.remainingPercent - 75) < 0.001)
+        #expect(monthly.resetDate != nil)
+    }
+
+    @Test func tokenPlanNoData() {
+        let json = """
+        { "hasQuotaData": false }
+        """
+        #expect(throws: (any Error).self) {
+            _ = try AlibabaCLIProvider.parseTokenPlan(try JSONSerialization.jsonObject(with: Data(json.utf8)))
+        }
+    }
+}
+
+@Suite("阿里云套餐回退")
+struct AlibabaPlanFallbackTests {
+    @Test func missingCodingPlanFallsBack() {
+        #expect(AlibabaCLIProvider.shouldTryTokenPlan(
+            after: CLIProviderError.failed(tool: "bl", message: "No active Coding Plan subscription found.")
+        ))
+        #expect(AlibabaCLIProvider.shouldTryTokenPlan(
+            after: ProviderError.notSupported("没有可读取的额度窗口")
+        ))
+    }
+
+    @Test func authErrorsDoNotFallBack() {
+        #expect(!AlibabaCLIProvider.shouldTryTokenPlan(
+            after: CLIProviderError.failed(tool: "bl", message: "not logged in, run bl auth login --console")
+        ))
+        #expect(!AlibabaCLIProvider.shouldTryTokenPlan(
+            after: CLIProviderError.missing(tool: "bl", hint: "install")
+        ))
     }
 }

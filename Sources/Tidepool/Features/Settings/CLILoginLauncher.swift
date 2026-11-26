@@ -12,7 +12,7 @@ enum CLILoginLauncher {
             script = """
             #!/bin/bash
             export PATH="\(CLIExecutor.searchDirectories.joined(separator: ":")):$PATH"
-            echo "Tidepool · 火山方舟 Coding Plan 登录"
+            echo "Tidepool · 火山方舟套餐登录"
             echo
             if ! command -v arkcli >/dev/null 2>&1; then
               echo "未安装 arkcli。请先在终端运行："
@@ -37,7 +37,7 @@ enum CLILoginLauncher {
             script = """
             #!/bin/bash
             export PATH="\(CLIExecutor.searchDirectories.joined(separator: ":")):$PATH"
-            echo "Tidepool · 阿里云百炼 Coding Plan 登录"
+            echo "Tidepool · 阿里云百炼套餐登录"
             echo
             if ! command -v bl >/dev/null 2>&1; then
               echo "未安装百炼 CLI。请先在终端运行："
