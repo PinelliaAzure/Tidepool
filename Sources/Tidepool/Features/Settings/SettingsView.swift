@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.8"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.9"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -271,6 +271,8 @@ struct ProviderRowView: View {
     @State private var customExpanded = false
     @State private var secretIdInput: String
     @State private var secretKeyInput: String
+    @State private var siliconFlowSession: SiliconFlowSession?
+    @State private var isReadingSafari = false
 
     init(account: ProviderAccount, draggingID: Binding<UUID?>) {
         self.account = account
@@ -282,6 +284,9 @@ struct ProviderRowView: View {
         let credentials = CloudCredentials.decode(AppStore.shared.apiKey(for: account.id))
         _secretIdInput = State(initialValue: credentials?.secretId ?? "")
         _secretKeyInput = State(initialValue: credentials?.secretKey ?? "")
+        _siliconFlowSession = State(
+            initialValue: SiliconFlowSession.decode(AppStore.shared.apiKey(for: account.id))
+        )
     }
 
     var body: some View {
@@ -356,12 +361,19 @@ struct ProviderRowView: View {
                             store.setAPIKey(id: account.id, key: keyInput)
                             hasStoredKey = true
                             keyInput = ""
+                            if account.provider == .siliconFlow {
+                                siliconFlowSession = nil
+                            }
                         }
                         Task { await store.refresh(account.id, force: true) }
                     }
                     .disabled(keyInput.isEmpty && !allowsEmptyKey)
                     .controlSize(.small)
                 }
+            }
+
+            if account.provider == .siliconFlow {
+                siliconFlowSessionRow
             }
 
             if supportsRegionPicker {
@@ -453,6 +465,12 @@ struct ProviderRowView: View {
     // MARK: - 文案
 
     private var keyPlaceholder: String {
+        if account.provider == .siliconFlow, siliconFlowSession != nil {
+            return T(
+                "已连接控制台 · 输入国际站 API Key 可切换",
+                "Console connected · enter a global API key to switch"
+            )
+        }
         if hasStoredKey {
             return T("已保存在钥匙串 · 输入新 Key 可替换", "Saved in Keychain · enter a new key to replace")
         }
@@ -542,6 +560,117 @@ struct ProviderRowView: View {
                 "密钥只保存在 macOS 钥匙串，不会写入配置文件。",
                 "Keys are stored only in the macOS Keychain, never in config files."
             )
+        }
+    }
+
+    // MARK: - 硅基流动控制台登录态
+
+    private var siliconFlowSessionRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.badge.key")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                if let session = siliconFlowSession {
+                    Text(T("已连接控制台（\(session.source)）", "Console connected (\(session.source))"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(T("重新连接", "Reconnect")) {
+                        presentSiliconFlowLogin()
+                    }
+                    .controlSize(.small)
+                    Button(T("断开", "Disconnect")) {
+                        disconnectSiliconFlow()
+                    }
+                    .controlSize(.small)
+                } else {
+                    Text(T("国内站余额需要控制台登录态", "China balance needs a console session"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(T("在 Tidepool 中登录", "Sign in with Tidepool")) {
+                        presentSiliconFlowLogin()
+                    }
+                    .controlSize(.small)
+                    Button(T("从 Safari 读取", "Read from Safari")) {
+                        readSafariSession()
+                    }
+                    .controlSize(.small)
+                    .disabled(isReadingSafari)
+                }
+            }
+
+            Text(T(
+                "登录态只保存在钥匙串，仅发送给 cloud.siliconflow.cn。Safari 读取需要「完全磁盘访问权限」。",
+                "The session is stored only in the Keychain and sent only to cloud.siliconflow.cn. Reading Safari requires Full Disk Access."
+            ))
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private func presentSiliconFlowLogin() {
+        SiliconFlowLoginWindowController.shared.show { session in
+            saveSiliconFlowSession(session)
+        }
+    }
+
+    private func saveSiliconFlowSession(_ session: SiliconFlowSession) {
+        guard let encoded = session.encoded() else { return }
+        store.setAPIKey(id: account.id, key: encoded)
+        siliconFlowSession = session
+        hasStoredKey = true
+        Task { await store.refresh(account.id, force: true) }
+    }
+
+    private func disconnectSiliconFlow() {
+        store.setAPIKey(id: account.id, key: "")
+        siliconFlowSession = nil
+        hasStoredKey = false
+        SiliconFlowLoginWindowController.clearWebSession()
+        Task { await store.refresh(account.id, force: true) }
+    }
+
+    private func readSafariSession() {
+        isReadingSafari = true
+        Task {
+            do {
+                let header = try SafariCookieReader.cookieHeader(for: "cloud.siliconflow.cn")
+                let session = SiliconFlowSession(
+                    cookie: header,
+                    subjectID: nil,
+                    source: "Safari",
+                    savedAt: Date(),
+                    userAgent: nil
+                )
+                _ = try await SiliconFlowConsoleClient().fetch(session: session)
+                isReadingSafari = false
+                saveSiliconFlowSession(session)
+            } catch {
+                isReadingSafari = false
+                presentSafariError(error)
+            }
+        }
+    }
+
+    private func presentSafariError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = T("无法读取 Safari 登录态", "Cannot read Safari session")
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: T("在 Tidepool 中登录", "Sign in with Tidepool"))
+        alert.addButton(withTitle: T("打开系统设置", "Open System Settings"))
+        alert.addButton(withTitle: T("取消", "Cancel"))
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            presentSiliconFlowLogin()
+        case .alertSecondButtonReturn:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+                NSWorkspace.shared.open(url)
+            }
+        default:
+            break
         }
     }
 

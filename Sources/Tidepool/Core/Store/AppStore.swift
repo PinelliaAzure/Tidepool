@@ -393,7 +393,9 @@ final class AppStore {
 
         do {
             let provider: BalanceProviding
-            if account.provider == .alibaba, CloudCredentials.decode(storedKey) != nil {
+            if account.provider == .siliconFlow, SiliconFlowSession.decode(storedKey) != nil {
+                provider = SiliconFlowConsoleProvider()
+            } else if account.provider == .alibaba, CloudCredentials.decode(storedKey) != nil {
                 provider = AlibabaCloudProvider()
             } else {
                 provider = ProviderRegistry.make(for: account)

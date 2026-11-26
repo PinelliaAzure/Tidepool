@@ -58,6 +58,31 @@ if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
 #endif
 
 #if DEBUG
+if ProcessInfo.processInfo.arguments.contains("--safari-cookie-test") {
+    MainActor.assumeIsolated {
+        do {
+            let header = try SafariCookieReader.cookieHeader(for: "cloud.siliconflow.cn")
+            print("cookies: \(header.count) chars, auth=\(header.contains("__SF_auth.session-token"))")
+        } catch {
+            print("error: \(error.localizedDescription)")
+        }
+        exit(0)
+    }
+}
+#endif
+
+#if DEBUG
+if ProcessInfo.processInfo.arguments.contains("--siliconflow-login") {
+    MainActor.assumeIsolated {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        SiliconFlowLoginWindowController.shared.show { _ in }
+        app.run()
+    }
+}
+#endif
+
+#if DEBUG
 if ProcessInfo.processInfo.arguments.contains("--preview")
     || ProcessInfo.processInfo.arguments.contains("--preview-quota")
     || ProcessInfo.processInfo.arguments.contains("--preview-usage")

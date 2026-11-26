@@ -17,7 +17,7 @@ macOS 菜单栏里的多平台 AI 余额与余量仪表盘：品牌图标旁边�
 - **额度节奏**：用「时间进度 vs 用量进度」判断会不会提前用完，而不只给一个百分比
 - **潮汐图**：余额采样的 7 / 30 天水位曲线，附日均消耗与 runway
 - **本地用量**：读取 OpenCode / Claude Code / Codex 的本机会话，按模型 / 工具拆分 tokens 与估算费用，支持 CSV
-- **隐私优先**：Key 只进钥匙串，数据只落本机，无遥测；一键隐私模式隐藏金额
+- **隐私优先**：Key / 登录态只进钥匙串，数据只落本机，无遥测；一键隐私模式隐藏金额
 - **原生质感**：AppKit + SwiftUI，跟随 Liquid Glass / 明暗 / 降低透明度
 - **中英双语**：跟随系统语言，也可在设置里手动切换（重启生效）
 
@@ -85,7 +85,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.8.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.9.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -100,7 +100,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 71 个单元测试（Swift Testing）
+make test         # 75 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -138,9 +138,9 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | 华为云 | 账户余额（CNY） | `bss.myhuaweicloud.com` + AK/SK 签名 | ✅ 官方 API |
 | 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |
 
-> SiliconFlow 国内站 `/v1/user/info` 已于 2026-08-14 下线（HTTP 410），官方尚未发布替代余额 API；Tidepool 会显示明确提示，国际站账号可在设置里切换到 `api.siliconflow.com`（USD）。
+> SiliconFlow 国内站 `/v1/user/info` 已于 2026-08-14 下线（HTTP 410），官方尚未发布替代余额 API。Tidepool 支持两种方式读取国内站控制台余额：**在 Tidepool 内置窗口登录**（推荐，无需系统权限），或**从 Safari 读取登录态**（需要给 Tidepool 完全磁盘访问权限）。登录态只保存在钥匙串，仅发送给 `cloud.siliconflow.cn`，可随时断开。国际站账号仍可切换到 `api.siliconflow.com`（USD）。
 
-所有接口均为只读，不消耗额度；不做网页登录 / session 抓取。
+所有接口均为只读，不消耗额度。除用户主动连接的硅基流动控制台登录态外，不做网页抓取；该登录态可随时在设置里断开并清除。
 非公开接口没有稳定性承诺，解析器已做缺字段容错，失败时保留上次数据并提示。
 
 ## 隐私

@@ -17,6 +17,10 @@ enum PreviewRunner {
         let store = AppStore.shared
         store.seedPreviewData()
         UsageStore.shared.seedPreviewData()
+        if ProcessInfo.processInfo.arguments.contains("--preview-settings-siliconflow"),
+           !store.accounts.contains(where: { $0.provider == .siliconFlow }) {
+            _ = store.addAccount(provider: .siliconFlow, name: "SiliconFlow")
+        }
         if ProcessInfo.processInfo.arguments.contains("--preview-privacy") {
             store.setPreviewPrivacy(true)
         }
