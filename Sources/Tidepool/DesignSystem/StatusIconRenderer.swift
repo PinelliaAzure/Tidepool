@@ -2,44 +2,43 @@ import AppKit
 
 /// 程序化渲染的鲸鱼剪影（Template / 品牌色两种模式）。
 /// 视觉基准：100 × 64 画布，鲸头朝右（朝向后面的金额文字）。
+@MainActor
 enum StatusIconRenderer {
-    /// 菜单栏图标：可选品牌色（nil 则为单色模板图，自动适配明暗）、
-    /// 低余额角标与闲时月亮角标。
+    /// 菜单栏图标：Provider 品牌标识（或 App T 字标）+ 低余额 / 闲时角标。
     static func menuBarIcon(
-        size: CGFloat = 18,
-        tint: NSColor? = nil,
-        alert: Bool = false,
-        offPeak: Bool = false
+        provider: ProviderID?,
+        colorMode: Bool,
+        alert: Bool,
+        offPeak: Bool,
+        size: CGFloat = 18
     ) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
-        image.isTemplate = (tint == nil)
+        image.isTemplate = !colorMode
         image.lockFocus()
         defer { image.unlockFocus() }
 
-        let whaleFrame = NSRect(
-            x: 0,
-            y: size * 0.14,
-            width: size * 0.82,
-            height: size * 0.72
-        )
-        drawWhale(in: whaleFrame, color: tint ?? .black)
+        let markSize = size * 0.84
+        let markRect = NSRect(x: 0, y: size * 0.08, width: markSize, height: markSize)
+        if let provider,
+           let mark = ProviderIconRenderer.icon(for: provider, colorMode: colorMode, size: markSize) {
+            mark.draw(in: markRect)
+        } else {
+            ProviderIconRenderer.appMark(
+                size: markSize,
+                tint: colorMode ? ProviderID.deepseek.nsBrandColor : nil
+            ).draw(in: markRect)
+        }
 
-        let badgeColor = tint ?? .black
         if offPeak {
-            drawMoon(size: size, color: badgeColor)
+            drawMoon(size: size, color: colorMode ? .systemTeal : .black)
         }
 
         if alert {
             let dotSize = size * 0.26
             let dot = NSBezierPath(
-                ovalIn: NSRect(
-                    x: size - dotSize,
-                    y: 0,
-                    width: dotSize,
-                    height: dotSize
-                )
+                ovalIn: NSRect(x: size - dotSize, y: 0, width: dotSize, height: dotSize)
             )
-            (tint == nil ? NSColor.black : NSColor.systemRed).setFill()
+            (colorMode ? NSColor.systemRed : NSColor.black).setFill()
             dot.fill()
         }
         return image

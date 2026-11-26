@@ -289,9 +289,7 @@ struct ProviderRowView: View {
                     }
                     .help(T("拖动排序", "Drag to reorder"))
 
-                Circle()
-                    .fill(account.provider.brandColor)
-                    .frame(width: 8, height: 8)
+                ProviderGlyph(provider: account.provider, size: 14)
                 TextField(T("名称", "Name"), text: nameBinding)
                     .textFieldStyle(.plain)
                     .font(.body.weight(.medium))

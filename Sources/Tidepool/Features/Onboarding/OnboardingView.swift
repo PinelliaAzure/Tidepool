@@ -69,7 +69,7 @@ struct OnboardingView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(nsImage: StatusIconRenderer.whaleIcon(size: 52, tint: provider.nsBrandColor))
+            Image(nsImage: ProviderIconRenderer.appMark(size: 52, tint: provider.nsBrandColor))
             VStack(alignment: .leading, spacing: 3) {
                 Text("Tidepool")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
@@ -120,9 +120,7 @@ struct OnboardingView: View {
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 7) {
-                    Circle()
-                        .fill(option.brandColor)
-                        .frame(width: 8, height: 8)
+                    ProviderGlyph(provider: option, size: 13)
                     Text(option.displayName)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.primary)
@@ -159,7 +157,7 @@ struct OnboardingView: View {
     private var credentialsStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Circle().fill(provider.brandColor).frame(width: 8, height: 8)
+                ProviderGlyph(provider: provider, size: 13)
                 Text(T("\(provider.displayName) 的 API Key", "\(provider.displayName) API key"))
                     .font(.system(size: 15, weight: .semibold))
             }
@@ -266,7 +264,7 @@ struct OnboardingView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 5) {
-                    Image(nsImage: StatusIconRenderer.menuBarIcon(tint: provider.nsBrandColor))
+                    Image(nsImage: StatusIconRenderer.menuBarIcon(provider: provider, colorMode: true, alert: false, offPeak: false))
                     Text(menuBarSample)
                         .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
@@ -433,6 +431,16 @@ struct OnboardingView: View {
             return T(
                 "在 platform.kimi.com 的 Kimi For Coding 页面获取 Coding Key（sk-…）。",
                 "Get a Coding key (sk-…) from Kimi For Coding on platform.kimi.com."
+            )
+        case .openrouter:
+            return T(
+                "在 openrouter.ai 的 Keys 页面创建；余额与用量以美元计。",
+                "Create one on openrouter.ai → Keys; credits and usage are in USD."
+            )
+        case .siliconFlow:
+            return T(
+                "在 cloud.siliconflow.cn 的 API 密钥页面创建；余额以人民币计。",
+                "Create one on cloud.siliconflow.cn → API Keys; balance is in CNY."
             )
         }
     }

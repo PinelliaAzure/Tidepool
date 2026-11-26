@@ -40,14 +40,18 @@ struct PopoverRootView: View {
     private var headerRow: some View {
         HStack(spacing: 6) {
             if store.visibleAccounts.count > 1 {
-                ForEach(store.visibleAccounts) { account in
-                    tabPill(account)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(store.visibleAccounts) { account in
+                            tabPill(account)
+                        }
+                    }
+                    .padding(.vertical, 1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else if let account = store.selectedAccount {
                 HStack(spacing: 6) {
-                    Circle()
-                        .fill(account.provider.brandColor)
-                        .frame(width: 8, height: 8)
+                    ProviderGlyph(provider: account.provider, size: 13)
                     Text(account.name)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
@@ -71,9 +75,7 @@ struct PopoverRootView: View {
             store.selectAccount(id: account.id)
         } label: {
             HStack(spacing: 6) {
-                Circle()
-                    .fill(account.provider.brandColor)
-                    .frame(width: 7, height: 7)
+                ProviderGlyph(provider: account.provider, size: 12)
                 Text(account.name)
                     .font(.caption.weight(.medium))
             }
@@ -102,7 +104,7 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(nsImage: StatusIconRenderer.whaleIcon(size: 84, tint: .secondaryLabelColor))
+            Image(nsImage: ProviderIconRenderer.appMark(size: 72, tint: .secondaryLabelColor))
                 .padding(.top, 8)
             VStack(spacing: 4) {
                 Text(T("潮池还是空的", "Your tidepool is empty"))

@@ -8,6 +8,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     case moonshot
     case kimiCode
     case glm
+    case openrouter
+    case siliconFlow
 
     var id: String { rawValue }
 
@@ -17,6 +19,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .moonshot: return "Kimi"
         case .kimiCode: return "Kimi Code"
         case .glm: return "GLM"
+        case .openrouter: return "OpenRouter"
+        case .siliconFlow: return "SiliconFlow"
         }
     }
 
@@ -27,6 +31,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .moonshot: return 0x8B5CF6
         case .kimiCode: return 0x8B5CF6
         case .glm: return 0x14B8A6
+        case .openrouter: return 0x6C5CE7
+        case .siliconFlow: return 0x5B5CF5
         }
     }
 
@@ -43,6 +49,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .moonshot: return T("开放平台 API 余额", "API balance")
         case .kimiCode: return T("Kimi For Coding 套餐额度", "Kimi For Coding quota")
         case .glm: return T("GLM Coding Plan 额度", "GLM Coding Plan quota")
+        case .openrouter: return T("API 余额（USD）", "API credits (USD)")
+        case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
         }
     }
 
@@ -50,7 +58,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     var isQuotaProvider: Bool {
         switch self {
         case .kimiCode, .glm: return true
-        case .deepseek, .moonshot: return false
+        case .deepseek, .moonshot, .openrouter, .siliconFlow: return false
         }
     }
 
@@ -60,6 +68,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .moonshot: return URL(string: "https://platform.moonshot.cn")!
         case .kimiCode: return URL(string: "https://platform.kimi.com")!
         case .glm: return URL(string: "https://open.bigmodel.cn")!
+        case .openrouter: return URL(string: "https://openrouter.ai/settings/keys")!
+        case .siliconFlow: return URL(string: "https://cloud.siliconflow.cn/account/ak")!
         }
     }
 
@@ -69,6 +79,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .moonshot: return URL(string: "https://api.moonshot.cn")!
         case .kimiCode: return URL(string: "https://api.kimi.com")!
         case .glm: return URL(string: "https://open.bigmodel.cn")!
+        case .openrouter: return URL(string: "https://openrouter.ai")!
+        case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
         }
     }
 }

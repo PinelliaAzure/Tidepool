@@ -50,6 +50,8 @@ enum ProviderLabel {
         case "glm", "zhipu", "bigmodel": return "GLM"
         case "anthropic": return "Anthropic"
         case "openai": return "OpenAI"
+        case "openrouter": return "OpenRouter"
+        case "siliconflow": return "SiliconFlow"
         case "opencode": return "OpenCode"
         default: return key.isEmpty ? T("其他", "Other") : key
         }

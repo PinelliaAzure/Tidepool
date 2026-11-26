@@ -114,6 +114,7 @@ final class AppStore {
     struct MenuBarContent {
         var text: String?
         var accent: NSColor?
+        var provider: ProviderID?
         var alert: Bool
         var offPeak: Bool
         var tooltip: String
@@ -178,6 +179,7 @@ final class AppStore {
         return MenuBarContent(
             text: text,
             accent: primary?.provider.nsBrandColor,
+            provider: menuBarStyle == .all ? nil : primary?.provider,
             alert: alert,
             offPeak: pricing?.isOffPeak ?? false,
             tooltip: tooltip
@@ -440,10 +442,14 @@ final class AppStore {
         let deepseek = ProviderAccount(provider: .deepseek, name: "DeepSeek", sortOrder: 0)
         let kimi = ProviderAccount(provider: .moonshot, name: "Kimi", sortOrder: 1)
         let glm = ProviderAccount(provider: .glm, name: "GLM", sortOrder: 2)
-        accounts = [deepseek, kimi, glm]
+        let openrouter = ProviderAccount(provider: .openrouter, name: "OpenRouter", sortOrder: 3)
+        let siliconflow = ProviderAccount(provider: .siliconFlow, name: "SiliconFlow", sortOrder: 4)
+        accounts = [deepseek, kimi, glm, openrouter, siliconflow]
         states[deepseek.id] = AccountState(isRefreshing: false, lastSuccess: now, lastError: nil)
         states[kimi.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-420), lastError: nil)
         states[glm.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-120), lastError: nil)
+        states[openrouter.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-260), lastError: nil)
+        states[siliconflow.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-300), lastError: nil)
 
         snapshots[deepseek.id] = ProviderSnapshot(
             fetchedAt: now,
@@ -506,6 +512,19 @@ final class AppStore {
             let date = Calendar.current.date(byAdding: .day, value: -(kimiValues.count - 1 - index), to: now)!
             sampleStore.append(accountID: kimi.id, value: value, now: date)
         }
+
+        snapshots[openrouter.id] = ProviderSnapshot(
+            fetchedAt: now.addingTimeInterval(-260),
+            balance: BalanceSnapshot(currency: "USD", total: 57.5, granted: nil, toppedUp: 100, isAvailable: true),
+            quotas: [],
+            planName: "OpenRouter"
+        )
+        snapshots[siliconflow.id] = ProviderSnapshot(
+            fetchedAt: now.addingTimeInterval(-300),
+            balance: BalanceSnapshot(currency: "CNY", total: 12.34, granted: nil, toppedUp: 20, isAvailable: true),
+            quotas: [],
+            planName: "SiliconFlow"
+        )
 
         let glmWeekly: [Double] = [98, 95, 93, 91, 89, 88]
         for (index, percent) in glmWeekly.enumerated() {

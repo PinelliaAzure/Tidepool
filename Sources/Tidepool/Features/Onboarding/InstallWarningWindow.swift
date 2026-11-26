@@ -69,7 +69,7 @@ private struct InstallWarningView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                Image(nsImage: StatusIconRenderer.whaleIcon(size: 48, tint: NSColor(hex: 0x4D6BFE)))
+                Image(nsImage: ProviderIconRenderer.appMark(size: 48, tint: NSColor(hex: 0x4D6BFE)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(T("先把 Tidepool 安装到「应用程序」", "Install Tidepool first"))
                         .font(.system(size: 16, weight: .semibold))

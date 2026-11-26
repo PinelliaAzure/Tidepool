@@ -78,3 +78,38 @@ struct ProviderParsingTests {
         #expect(decoded == [account])
     }
 }
+
+@Suite("OpenRouter / SiliconFlow 解析")
+struct AdditionalProviderTests {
+    @Test func openRouter() throws {
+        let json = """
+        { "data": { "total_credits": 100.0, "total_usage": 42.5 } }
+        """
+        let snapshot = try OpenRouterProvider().parse(Data(json.utf8))
+        let balance = try #require(snapshot.balance)
+        #expect(balance.currency == "USD")
+        #expect(abs(balance.total - 57.5) < 0.001)
+        #expect(abs((balance.toppedUp ?? 0) - 100) < 0.001)
+        #expect(balance.isAvailable)
+    }
+
+    @Test func siliconFlow() throws {
+        let json = """
+        {
+          "code": 20000,
+          "status": true,
+          "data": {
+            "balance": "12.34",
+            "chargeBalance": "20.00",
+            "totalBalance": "12.34"
+          }
+        }
+        """
+        let snapshot = try SiliconFlowProvider().parse(Data(json.utf8))
+        let balance = try #require(snapshot.balance)
+        #expect(balance.currency == "CNY")
+        #expect(abs(balance.total - 12.34) < 0.001)
+        #expect(abs((balance.toppedUp ?? 0) - 20) < 0.001)
+        #expect(balance.isAvailable)
+    }
+}

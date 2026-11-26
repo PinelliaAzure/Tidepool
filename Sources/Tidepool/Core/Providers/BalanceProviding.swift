@@ -80,6 +80,8 @@ enum ProviderRegistry {
         case .moonshot: return MoonshotProvider()
         case .kimiCode: return KimiCodeProvider()
         case .glm: return GLMProvider()
+        case .openrouter: return OpenRouterProvider()
+        case .siliconFlow: return SiliconFlowProvider()
         }
     }
 }

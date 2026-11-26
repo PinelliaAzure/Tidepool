@@ -26,17 +26,22 @@ if ProcessInfo.processInfo.arguments.contains("--usage-report") {
 if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
     MainActor.assumeIsolated {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-        let variants: [(String, Bool, Bool)] = [
-            ("tidepool-whale.png", false, false),
-            ("tidepool-whale-offpeak.png", true, false),
-            ("tidepool-whale-alert.png", false, true)
+        let variants: [(String, ProviderID?, Bool, Bool)] = [
+            ("tidepool-app-mark.png", nil, true, false),
+            ("tidepool-deepseek-color.png", .deepseek, true, false),
+            ("tidepool-deepseek-mono.png", .deepseek, false, false),
+            ("tidepool-kimi.png", .moonshot, true, false),
+            ("tidepool-glm.png", .glm, true, false),
+            ("tidepool-openrouter.png", .openrouter, true, false),
+            ("tidepool-siliconflow.png", .siliconFlow, true, false)
         ]
-        for (name, offPeak, alert) in variants {
+        for (name, provider, colorMode, alert) in variants {
             let image = StatusIconRenderer.menuBarIcon(
-                size: 256,
-                tint: .black,
+                provider: provider,
+                colorMode: colorMode,
                 alert: alert,
-                offPeak: offPeak
+                offPeak: false,
+                size: 256
             )
             let url = directory.appendingPathComponent(name)
             if let tiff = image.tiffRepresentation,

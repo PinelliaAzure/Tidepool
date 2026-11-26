@@ -8,9 +8,7 @@ struct BalanceHeroView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(account.provider.brandColor)
-                    .frame(width: 8, height: 8)
+                ProviderGlyph(provider: account.provider, size: 13)
                 Text(account.name)
                     .font(.system(size: 13, weight: .semibold))
                 if let balance = store.snapshots[account.id]?.balance {

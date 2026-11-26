@@ -3,12 +3,13 @@ import SwiftUI
 
 /// 菜单栏外壳：负责状态图标、左右键行为与 Popover 的展示。
 @MainActor
-final class StatusItemController: NSObject, NSMenuDelegate {
+final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     private let store: AppStore
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private var contextMenu: NSMenu?
     private var popoverController: NSHostingController<AnyView>?
+    private var dismissMonitors: [Any] = []
 
     init(store: AppStore) {
         self.store = store
@@ -21,6 +22,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
 
         if let button = statusItem.button {
             button.target = self
@@ -35,11 +37,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func refreshStatusItem() {
         guard let button = statusItem.button else { return }
         let content = store.menuBarContent
-        let tint: NSColor? = store.colorLogo
-            ? (content.accent ?? ProviderID.deepseek.nsBrandColor)
-            : nil
         button.image = StatusIconRenderer.menuBarIcon(
-            tint: tint,
+            provider: content.provider,
+            colorMode: store.colorLogo,
             alert: content.alert,
             offPeak: content.offPeak
         )
@@ -93,7 +93,59 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             popover.contentViewController = controller
         }
         popover.contentSize = NSSize(width: 388, height: 720)
+        NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        startDismissMonitors()
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        stopDismissMonitors()
+    }
+
+    private func startDismissMonitors() {
+        stopDismissMonitors()
+
+        if let local = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown],
+            handler: { [weak self] event in
+                guard let self, self.popover.isShown else { return event }
+                if let window = event.window,
+                   window == self.popover.contentViewController?.view.window {
+                    return event
+                }
+                // 弹出菜单（刷新间隔、Provider 排序）不应触发收起
+                if let window = event.window, window.level == .popUpMenu {
+                    return event
+                }
+                if let buttonWindow = self.statusItem.button?.window,
+                   event.window == buttonWindow {
+                    return event
+                }
+                self.popover.performClose(nil)
+                return event
+            }
+        ) {
+            dismissMonitors.append(local)
+        }
+
+        if let global = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown],
+            handler: { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.popover.isShown else { return }
+                    self.popover.performClose(nil)
+                }
+            }
+        ) {
+            dismissMonitors.append(global)
+        }
+    }
+
+    private func stopDismissMonitors() {
+        for monitor in dismissMonitors {
+            NSEvent.removeMonitor(monitor)
+        }
+        dismissMonitors.removeAll()
     }
 
     private func showContextMenu() {
