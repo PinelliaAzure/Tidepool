@@ -1,18 +1,19 @@
-# Tidepool 🐋
+# Tidepool 🌊
 
 [![CI](https://github.com/PinelliaAzure/Tidepool/actions/workflows/ci.yml/badge.svg)](https://github.com/PinelliaAzure/Tidepool/actions/workflows/ci.yml)
 
 > Your AI budget, at a glance. · 让每一分余额，都有潮汐。
 
-macOS 菜单栏里的大模型余额与余量仪表盘：鲸鱼旁边是你的余额，点开是一整片玻璃面板。
+macOS 菜单栏里的多平台 AI 余额与余量仪表盘：品牌图标旁边是你的余额，点开是一整片玻璃面板。
 
 <p align="center">
   <img src="docs/preview.png" width="360" alt="余额视图">
   <img src="docs/preview-quota.png" width="360" alt="额度视图">
 </p>
 
-- **余额与额度**：DeepSeek / Kimi 的 API 余额，GLM Coding Plan / Kimi Code 的 5 小时与周额度
-- **闲时计价**：DeepSeek 工作日高峰按标准价、其余时段 5 折；鲸鱼右上角月亮角标 + 24h 时段条
+- **多平台**：DeepSeek / Kimi / Kimi Code / GLM / OpenRouter / SiliconFlow；还能用「自定义」接入任意只读 JSON 接口
+- **余额与额度**：API 余额、Coding Plan 5 小时 / 周额度、自定义百分比
+- **实时计价**：DeepSeek 工作日高峰为标准价、其余时段 5 折；金额下方橙 / 青状态线 + 24h 时段条
 - **额度节奏**：用「时间进度 vs 用量进度」判断会不会提前用完，而不只给一个百分比
 - **潮汐图**：余额采样的 7 / 30 天水位曲线，附日均消耗与 runway
 - **本地用量**：读取 OpenCode / Claude Code / Codex 的本机会话，按模型 / 工具拆分 tokens 与估算费用，支持 CSV
@@ -27,11 +28,11 @@ macOS 菜单栏里的大模型余额与余量仪表盘：鲸鱼旁边是你的�
 ## 功能
 
 ### 菜单栏
-- 鲸鱼图标 + 等宽数字金额；额度型显示剩余百分比
+- 当前 Provider 的品牌图形 + 等宽数字金额；额度型显示剩余百分比
 - 三种展示方式：当前 Provider / 全部紧凑 / 最紧张的一项
 - 单色模板图标（自动适配壁纸与明暗）或彩色品牌图标
-- DeepSeek 闲时时鲸鱼右上角出现月亮角标，tooltip 显示下次切换时间
-- Provider 支持拖拽排序；低余额时鲸鱼出现告警点；右键菜单可刷新、打开用量、切换隐私模式、检查更新
+- DeepSeek 标准价时金额下方为橙色状态线，闲时为青色；每 30 秒与时段切换点实时更新
+- Provider 支持拖拽排序；低余额时出现告警点；右键菜单可刷新、打开用量、切换隐私模式、检查更新
 
 ### 面板
 - Provider 胶囊 Tab、Hero 余额、赠送 / 充值构成条
@@ -47,7 +48,17 @@ DeepSeek 官方规则（2026-11）：
 - 闲时：其余时段 5 折，周末全天闲时
 - 法定节假日以官方价格页为准（应用不内置节假日表，避免过期误报）
 
+菜单栏用金额下方的 2px 状态线表示（不是角标）：橙色 = 标准价，青色 = 闲时；tooltip 显示下次切换时间。
 架构上 `ProviderPricing.schedule(for:)` 支持给其他 Provider 增加时段规则；目前只有 DeepSeek 有官方闲时定价。
+
+### 自定义接入
+设置 → 添加 Provider → 自定义：
+
+- `Endpoint`：完整只读 URL（支持 `https://` / `http://`）
+- 鉴权：Bearer Token / 原始 Token / 无鉴权
+- 取值：余额路径（如 `data.balance`），或百分比路径（如 `data.limits.0.remaining_percent`，可标记「已用」），或剩余量 + 总量路径
+- 重置时间：可选，支持毫秒 / 秒时间戳或 ISO8601
+- 点路径用 `.` 访问 JSON，数组用数字下标
 
 ### 本地用量
 - 只读解析，不上传：`~/.local/share/opencode`、`~/.claude/projects`、`~/.codex/sessions`
@@ -61,7 +72,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.1.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.2.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -76,7 +87,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 46 个单元测试（Swift Testing）
+make test         # 54 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -105,6 +116,9 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | Kimi / Moonshot | API 余额（可用 / 代金券 / 现金） | `GET https://api.moonshot.cn/v1/users/me/balance` | ✅ 官方文档 |
 | Kimi Code | 5h / 周套餐余量 | `GET https://api.kimi.com/coding/v1/usages` | ⚠️ 非公开只读接口 |
 | GLM / Z.ai | Coding Plan 5h / 周 / MCP 月度额度 | `GET https://open.bigmodel.cn/api/monitor/usage/quota/limit`（国际 `api.z.ai`） | ⚠️ 非公开只读接口 |
+| OpenRouter | API credits（USD） | `GET https://openrouter.ai/api/v1/credits` | ✅ 官方接口 |
+| SiliconFlow | 账户余额（CNY） | `GET https://api.siliconflow.cn/v1/user/info` | ✅ 官方接口 |
+| 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |
 
 所有接口均为只读，不消耗额度；不做网页登录 / session 抓取。
 非公开接口没有稳定性承诺，解析器已做缺字段容错，失败时保留上次数据并提示。
@@ -122,12 +136,12 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 Sources/Tidepool/
 ├─ App/            菜单栏外壳、Popover、设置 / 用量 / 引导窗口
 ├─ Core/
-│  ├─ Providers/   DeepSeek / Kimi / Kimi Code / GLM 适配器
+│  ├─ Providers/   DeepSeek / Kimi / GLM / OpenRouter / SiliconFlow / 自定义适配器
 │  ├─ Store/       AppStore、轮询调度
 │  ├─ Usage/       本地会话扫描、聚合、价格估算、CSV
 │  ├─ Quota/       额度节奏
 │  └─ Notifications/
-├─ DesignSystem/   玻璃卡片、圆环、鲸鱼图标
+├─ DesignSystem/   玻璃卡片、圆环、T 字标与 Provider 图标
 ├─ Features/       Popover / Settings / Usage / Onboarding
 └─ Persistence/    Keychain、采样与偏好
 ```
@@ -136,8 +150,8 @@ Sources/Tidepool/
 
 - **M0 ✅** 菜单栏 + 玻璃面板 + DeepSeek / Kimi 余额 + 潮汐图 + runway
 - **M1 ✅** GLM / Kimi Code 额度 + 双环 + 节奏 + 通知 + 菜单栏多模式 + Provider 排序
-- **M2 ✅** Onboarding + 本地用量（OpenCode / Claude Code / Codex）+ CSV + 额度历史 + 隐私模式 + DeepSeek 闲时计价
-- **M3（本地）✅** 拖拽排序、重置前提醒、中英双语、应用图标、检查更新入口
+- **M2 ✅** 自定义 JSON 接入、OpenRouter / SiliconFlow、Onboarding + 本地用量（OpenCode / Claude Code / Codex）+ CSV + 额度历史 + 隐私模式 + DeepSeek 闲时计价
+- **M3（本地）✅** 拖拽排序、重置前提醒、中英双语、T 字标应用图标、Provider 品牌图标、检查更新入口
 - **M3 ⏳（需要账号/仓库）** Developer ID 签名 + 公证、Sparkle appcast、Homebrew Cask
   - 先改 `Sources/Tidepool/Core/Updates/UpdateChecker.swift` 里的仓库地址
   - 证书与 notarytool 凭据就绪后，在 `build-app.sh` 基础上补签名 / 公证步骤

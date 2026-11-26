@@ -9,7 +9,6 @@ enum StatusIconRenderer {
         provider: ProviderID?,
         colorMode: Bool,
         alert: Bool,
-        offPeak: Bool,
         size: CGFloat = 18
     ) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
@@ -29,10 +28,6 @@ enum StatusIconRenderer {
             ).draw(in: markRect)
         }
 
-        if offPeak {
-            drawMoon(size: size, color: colorMode ? .systemTeal : .black)
-        }
-
         if alert {
             let dotSize = size * 0.26
             let dot = NSBezierPath(
@@ -42,35 +37,6 @@ enum StatusIconRenderer {
             dot.fill()
         }
         return image
-    }
-
-    /// 右上角的小月牙：闲时（非高峰）计价。
-    private static func drawMoon(size: CGFloat, color: NSColor) {
-        let radius = size * 0.165
-        let center = NSPoint(x: size * 0.795, y: size * 0.795)
-        let outer = NSBezierPath(
-            ovalIn: NSRect(
-                x: center.x - radius,
-                y: center.y - radius,
-                width: radius * 2,
-                height: radius * 2
-            )
-        )
-        let innerRadius = radius * 0.94
-        let inner = NSBezierPath(
-            ovalIn: NSRect(
-                x: center.x - innerRadius + radius * 0.62,
-                y: center.y - innerRadius + radius * 0.26,
-                width: innerRadius * 2,
-                height: innerRadius * 2
-            )
-        )
-        let crescent = NSBezierPath()
-        crescent.windingRule = .evenOdd
-        crescent.append(outer)
-        crescent.append(inner)
-        color.setFill()
-        crescent.fill()
     }
 
     /// 大尺寸鲸鱼（空态插画等）。

@@ -74,6 +74,13 @@ protocol BalanceProviding {
 }
 
 enum ProviderRegistry {
+    static func make(for account: ProviderAccount) -> BalanceProviding {
+        if account.provider == .custom, let config = account.custom {
+            return CustomEndpointProvider(config: config)
+        }
+        return make(for: account.provider)
+    }
+
     static func make(for provider: ProviderID) -> BalanceProviding {
         switch provider {
         case .deepseek: return DeepSeekProvider()
@@ -82,6 +89,7 @@ enum ProviderRegistry {
         case .glm: return GLMProvider()
         case .openrouter: return OpenRouterProvider()
         case .siliconFlow: return SiliconFlowProvider()
+        case .custom: return UnsupportedProvider(provider: .custom)
         }
     }
 }

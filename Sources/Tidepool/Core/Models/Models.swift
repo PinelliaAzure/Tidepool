@@ -10,6 +10,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     case glm
     case openrouter
     case siliconFlow
+    case custom
 
     var id: String { rawValue }
 
@@ -21,6 +22,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return "GLM"
         case .openrouter: return "OpenRouter"
         case .siliconFlow: return "SiliconFlow"
+        case .custom: return T("自定义", "Custom")
         }
     }
 
@@ -33,6 +35,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return 0x14B8A6
         case .openrouter: return 0x6C5CE7
         case .siliconFlow: return 0x5B5CF5
+        case .custom: return 0x8E8E93
         }
     }
 
@@ -51,6 +54,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return T("GLM Coding Plan 额度", "GLM Coding Plan quota")
         case .openrouter: return T("API 余额（USD）", "API credits (USD)")
         case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
+        case .custom: return T("只读 JSON 接口", "Read-only JSON API")
         }
     }
 
@@ -58,7 +62,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     var isQuotaProvider: Bool {
         switch self {
         case .kimiCode, .glm: return true
-        case .deepseek, .moonshot, .openrouter, .siliconFlow: return false
+        case .deepseek, .moonshot, .openrouter, .siliconFlow, .custom: return false
         }
     }
 
@@ -70,6 +74,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .openrouter: return URL(string: "https://openrouter.ai/settings/keys")!
         case .siliconFlow: return URL(string: "https://cloud.siliconflow.cn/account/ak")!
+        case .custom: return URL(string: "https://github.com/PinelliaAzure/Tidepool")!
         }
     }
 
@@ -81,7 +86,13 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .openrouter: return URL(string: "https://openrouter.ai")!
         case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
+        case .custom: return URL(string: "https://example.com")!
         }
+    }
+
+    /// 首次引导里只展示内置渠道，自定义渠道放到设置里配置。
+    static var onboardingCases: [ProviderID] {
+        allCases.filter { $0 != .custom }
     }
 }
 
@@ -96,6 +107,7 @@ struct ProviderAccount: Codable, Identifiable, Equatable {
     var baseURL: URL?
     var sortOrder: Int
     var createdAt: Date
+    var custom: CustomEndpointConfig?
 
     init(
         provider: ProviderID,
@@ -105,7 +117,8 @@ struct ProviderAccount: Codable, Identifiable, Equatable {
         baseURL: URL? = nil,
         sortOrder: Int = 0,
         id: UUID = UUID(),
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        custom: CustomEndpointConfig? = nil
     ) {
         self.id = id
         self.provider = provider
@@ -115,10 +128,11 @@ struct ProviderAccount: Codable, Identifiable, Equatable {
         self.baseURL = baseURL
         self.sortOrder = sortOrder
         self.createdAt = createdAt
+        self.custom = custom
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, provider, name, enabled, intervalSeconds, baseURL, sortOrder, createdAt
+        case id, provider, name, enabled, intervalSeconds, baseURL, sortOrder, createdAt, custom
     }
 
     /// 兼容后续字段演进：缺失字段回退到默认值。
@@ -132,6 +146,7 @@ struct ProviderAccount: Codable, Identifiable, Equatable {
         baseURL = try container.decodeIfPresent(URL.self, forKey: .baseURL)
         sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        custom = try container.decodeIfPresent(CustomEndpointConfig.self, forKey: .custom)
     }
 }
 
@@ -149,12 +164,14 @@ enum QuotaKind: String, Codable, CaseIterable {
     case fiveHour
     case weekly
     case monthly
+    case custom
 
     var displayName: String {
         switch self {
         case .fiveHour: return T("5 小时", "5-hour")
         case .weekly: return T("本周", "Weekly")
         case .monthly: return T("本月", "Monthly")
+        case .custom: return T("自定义", "Custom")
         }
     }
 
@@ -164,6 +181,7 @@ enum QuotaKind: String, Codable, CaseIterable {
         case .fiveHour: return 5 * 3600
         case .weekly: return 7 * 86_400
         case .monthly: return 30 * 86_400
+        case .custom: return nil
         }
     }
 
@@ -172,6 +190,7 @@ enum QuotaKind: String, Codable, CaseIterable {
         case .fiveHour: return 0
         case .weekly: return 1
         case .monthly: return 2
+        case .custom: return 3
         }
     }
 }

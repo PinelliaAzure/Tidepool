@@ -10,6 +10,7 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     private var contextMenu: NSMenu?
     private var popoverController: NSHostingController<AnyView>?
     private var dismissMonitors: [Any] = []
+    private var priceTimer: Timer?
 
     init(store: AppStore) {
         self.store = store
@@ -31,6 +32,13 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
             button.imagePosition = .imageLeading
         }
         refreshStatusItem()
+
+        // 计价时段每 30 秒重算一次，跨过 09:00 / 12:00 / 14:00 / 18:00 时即时切换
+        priceTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshStatusItem()
+            }
+        }
     }
 
     /// 依据 AppStore 的最新状态刷新菜单栏显示。
@@ -40,11 +48,23 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
         button.image = StatusIconRenderer.menuBarIcon(
             provider: content.provider,
             colorMode: store.colorLogo,
-            alert: content.alert,
-            offPeak: content.offPeak
+            alert: content.alert
         )
-        button.title = content.text ?? ""
-        button.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+
+        let title = content.text ?? ""
+        if title.isEmpty {
+            button.attributedTitle = NSAttributedString(string: "")
+        } else {
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: NSColor.labelColor
+            ]
+            if let tint = content.pricingTint {
+                attributes[.underlineStyle] = NSUnderlineStyle.thick.rawValue
+                attributes[.underlineColor] = tint
+            }
+            button.attributedTitle = NSAttributedString(string: title, attributes: attributes)
+        }
         button.toolTip = content.tooltip
     }
 

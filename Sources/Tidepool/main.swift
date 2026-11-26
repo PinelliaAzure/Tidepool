@@ -40,7 +40,6 @@ if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
                 provider: provider,
                 colorMode: colorMode,
                 alert: alert,
-                offPeak: false,
                 size: 256
             )
             let url = directory.appendingPathComponent(name)

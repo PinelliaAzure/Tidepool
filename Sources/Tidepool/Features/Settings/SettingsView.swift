@@ -47,8 +47,8 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 Toggle(T("显示计价时段", "Show pricing window"), isOn: pricingBinding)
                 Text(T(
-                    "DeepSeek 工作日高峰为标准价，其余时段 5 折；闲时在鲸鱼右上角显示月亮。",
-                    "DeepSeek charges standard rates during weekday peak hours and 50% off otherwise; a moon appears on the whale during off-peak."
+                    "DeepSeek 工作日高峰为标准价，其余时段 5 折；金额下方橙色为标准价、青色为闲时。",
+                    "DeepSeek charges standard rates during weekday peak hours and 50% off otherwise; an orange underline means peak, teal means off-peak."
                 ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.2"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -268,6 +268,7 @@ struct ProviderRowView: View {
     @Environment(AppStore.self) private var store
     @State private var keyInput: String
     @State private var hasStoredKey: Bool
+    @State private var customExpanded = false
 
     init(account: ProviderAccount, draggingID: Binding<UUID?>) {
         self.account = account
@@ -275,6 +276,7 @@ struct ProviderRowView: View {
         let stored = AppStore.shared.apiKey(for: account.id)?.isEmpty == false
         _hasStoredKey = State(initialValue: stored)
         _keyInput = State(initialValue: "")
+        _customExpanded = State(initialValue: account.provider == .custom)
     }
 
     var body: some View {
@@ -321,13 +323,14 @@ struct ProviderRowView: View {
                         }
                     }
                 Button(hasStoredKey ? T("替换", "Replace") : T("保存并测试", "Save & test")) {
-                    guard !keyInput.isEmpty else { return }
-                    store.setAPIKey(id: account.id, key: keyInput)
-                    hasStoredKey = true
-                    keyInput = ""
+                    if !keyInput.isEmpty {
+                        store.setAPIKey(id: account.id, key: keyInput)
+                        hasStoredKey = true
+                        keyInput = ""
+                    }
                     Task { await store.refresh(account.id, force: true) }
                 }
-                .disabled(keyInput.isEmpty)
+                .disabled(keyInput.isEmpty && !allowsEmptyKey)
                 .controlSize(.small)
             }
 
@@ -351,6 +354,10 @@ struct ProviderRowView: View {
                 Text(regionHint)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            }
+
+            if account.provider == .custom {
+                customConfigSection
             }
 
             HStack(spacing: 8) {
@@ -421,6 +428,7 @@ struct ProviderRowView: View {
         switch account.provider {
         case .glm: return T("粘贴 GLM Coding Plan API Key", "Paste GLM Coding Plan API key")
         case .kimiCode: return T("粘贴 Kimi For Coding API Key（sk-…）", "Paste Kimi For Coding API key (sk-…)")
+        case .custom: return T("粘贴 API Key（无鉴权可留空）", "Paste API key (leave blank if no auth)")
         default: return T("粘贴 API Key", "Paste API key")
         }
     }
@@ -485,6 +493,135 @@ struct ProviderRowView: View {
                 "密钥只保存在 macOS 钥匙串，不会写入配置文件。",
                 "Keys are stored only in the macOS Keychain, never in config files."
             )
+        }
+    }
+
+    // MARK: - 自定义接口
+
+    private var allowsEmptyKey: Bool {
+        account.provider == .custom && (account.custom?.authStyle ?? .bearer) == .none
+    }
+
+    private var customConfig: CustomEndpointConfig {
+        account.custom ?? CustomEndpointConfig()
+    }
+
+    private func customBinding<T>(_ keyPath: WritableKeyPath<CustomEndpointConfig, T>) -> Binding<T> {
+        Binding(
+            get: { customConfig[keyPath: keyPath] },
+            set: { newValue in
+                store.updateAccount(id: account.id) { account in
+                    var config = account.custom ?? CustomEndpointConfig()
+                    config[keyPath: keyPath] = newValue
+                    account.custom = config
+                }
+            }
+        )
+    }
+
+    private func field(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            TextField(placeholder, text: text)
+                .textFieldStyle(.roundedBorder)
+                .labelsHidden()
+                .font(.system(size: 11, design: .monospaced))
+        }
+    }
+
+    private var customConfigSection: some View {
+        DisclosureGroup(isExpanded: $customExpanded) {
+            VStack(alignment: .leading, spacing: 8) {
+                field(
+                    T("Endpoint", "Endpoint"),
+                    text: customBinding(\.endpoint),
+                    placeholder: "https://api.example.com/v1/balance"
+                )
+
+                HStack(alignment: .bottom, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(T("鉴权方式", "Auth"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Picker("", selection: customBinding(\.authStyle)) {
+                            ForEach(CustomAuthStyle.allCases) { style in
+                                Text(style.title).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .controlSize(.small)
+                        .fixedSize()
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(T("币种", "Currency"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        TextField("CNY", text: customBinding(\.currency))
+                            .textFieldStyle(.roundedBorder)
+                            .labelsHidden()
+                            .font(.system(size: 11, design: .monospaced))
+                            .frame(width: 70)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(T("标签（可选）", "Label (optional)"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        TextField(T("自定义", "Custom"), text: customBinding(\.title))
+                            .textFieldStyle(.roundedBorder)
+                            .labelsHidden()
+                            .font(.system(size: 11))
+                            .frame(width: 130)
+                    }
+                    Spacer()
+                }
+
+                field(
+                    T("余额路径", "Balance path"),
+                    text: customBinding(\.balancePath),
+                    placeholder: "data.balance"
+                )
+
+                field(
+                    T("百分比路径（0–100）", "Percent path (0–100)"),
+                    text: customBinding(\.percentPath),
+                    placeholder: "data.limits.0.remaining_percent"
+                )
+                Toggle(T("这个百分比是「已用」", "This percent is \"used\""), isOn: customBinding(\.percentIsUsed))
+                    .controlSize(.small)
+
+                field(
+                    T("剩余量路径（可选）", "Remaining path (optional)"),
+                    text: customBinding(\.remainingPath),
+                    placeholder: "data.remaining"
+                )
+                field(
+                    T("总量路径（可选）", "Total path (optional)"),
+                    text: customBinding(\.totalPath),
+                    placeholder: "data.total"
+                )
+                field(
+                    T("重置时间路径（可选）", "Reset path (optional)"),
+                    text: customBinding(\.resetPath),
+                    placeholder: "data.reset_at"
+                )
+
+                Text(T(
+                    "点路径用 . 访问 JSON，数组用数字下标。余额路径优先；没有余额时尝试百分比 / 剩余量+总量。",
+                    "Use dots for JSON keys and numeric indexes for arrays. Balance wins; otherwise percent or remaining+total is used."
+                ))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 6)
+        } label: {
+            Label(T("接口映射", "API mapping"), systemImage: "slider.horizontal.3")
+                .font(.caption.weight(.medium))
         }
     }
 

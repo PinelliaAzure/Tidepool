@@ -21,7 +21,10 @@ struct PopoverRootView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerRow
             if let account = store.selectedAccount {
-                if account.provider.isQuotaProvider {
+                let snapshot = store.snapshots[account.id]
+                let showsQuota = account.provider.isQuotaProvider
+                    || (snapshot?.balance == nil && !(snapshot?.quotas.isEmpty ?? true))
+                if showsQuota {
                     QuotaHeroView(account: account)
                 } else {
                     BalanceHeroView(account: account)

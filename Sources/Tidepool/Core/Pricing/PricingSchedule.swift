@@ -121,7 +121,7 @@ enum ProviderPricing {
                     "Off-peak is 50% off; weekends are off-peak all day. Public holidays follow the official pricing page."
                 )
             )
-        case .moonshot, .kimiCode, .glm, .openrouter, .siliconFlow:
+        case .moonshot, .kimiCode, .glm, .openrouter, .siliconFlow, .custom:
             return nil
         }
     }

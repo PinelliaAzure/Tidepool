@@ -116,14 +116,15 @@ final class AppStore {
         var accent: NSColor?
         var provider: ProviderID?
         var alert: Bool
-        var offPeak: Bool
+        /// 有计价时段时，金额下方状态线的颜色（橙=标准价，青=闲时）。
+        var pricingTint: NSColor?
         var tooltip: String
     }
 
     var menuBarContent: MenuBarContent {
         let visible = visibleAccounts
         guard !visible.isEmpty else {
-            return MenuBarContent(text: nil, accent: nil, alert: false, offPeak: false, tooltip: T("Tidepool — 点击添加 Provider", "Tidepool — click to add a provider"))
+            return MenuBarContent(text: nil, accent: nil, alert: false, pricingTint: nil, tooltip: T("Tidepool — 点击添加 Provider", "Tidepool — click to add a provider"))
         }
 
         var text: String?
@@ -176,12 +177,19 @@ final class AppStore {
             tooltip += "（\(ProviderPricing.timeText(pricing.nextTransition, in: pricing.schedule)) \(pricing.nextLabel)）"
         }
 
+        let pricingTint: NSColor?
+        if showPricing, menuBarStyle != .all, let pricing {
+            pricingTint = pricing.isOffPeak ? .systemTeal : .systemOrange
+        } else {
+            pricingTint = nil
+        }
+
         return MenuBarContent(
             text: text,
             accent: primary?.provider.nsBrandColor,
             provider: menuBarStyle == .all ? nil : primary?.provider,
             alert: alert,
-            offPeak: pricing?.isOffPeak ?? false,
+            pricingTint: pricingTint,
             tooltip: tooltip
         )
     }
@@ -362,7 +370,9 @@ final class AppStore {
     func refresh(_ id: UUID, force: Bool = false) async -> Bool {
         guard let account = accounts.first(where: { $0.id == id }), account.enabled else { return false }
         guard force || states[id]?.isRefreshing != true else { return false }
-        guard let key = keychain.get(id), !key.isEmpty else {
+        let storedKey = keychain.get(id) ?? ""
+        let allowsEmptyKey = account.provider == .custom && account.custom?.authStyle == .none
+        guard allowsEmptyKey || !storedKey.isEmpty else {
             states[id]?.lastError = T("未配置 API Key", "API key not configured")
             notify()
             return false
@@ -377,8 +387,8 @@ final class AppStore {
         }
 
         do {
-            let provider = ProviderRegistry.make(for: account.provider)
-            let snapshot = try await provider.fetch(apiKey: key, baseURL: account.baseURL)
+            let provider = ProviderRegistry.make(for: account)
+            let snapshot = try await provider.fetch(apiKey: storedKey, baseURL: account.baseURL)
             snapshots[id] = snapshot
             states[id]?.lastSuccess = snapshot.fetchedAt
             if let total = snapshot.balance?.total {
@@ -444,12 +454,30 @@ final class AppStore {
         let glm = ProviderAccount(provider: .glm, name: "GLM", sortOrder: 2)
         let openrouter = ProviderAccount(provider: .openrouter, name: "OpenRouter", sortOrder: 3)
         let siliconflow = ProviderAccount(provider: .siliconFlow, name: "SiliconFlow", sortOrder: 4)
-        accounts = [deepseek, kimi, glm, openrouter, siliconflow]
+        let custom = ProviderAccount(
+            provider: .custom,
+            name: "My API",
+            sortOrder: 5,
+            custom: CustomEndpointConfig(
+                endpoint: "https://example.com/v1/balance",
+                authStyle: .bearer,
+                currency: "CNY",
+                balancePath: "data.balance",
+                percentPath: "",
+                percentIsUsed: false,
+                remainingPath: "",
+                totalPath: "",
+                resetPath: "",
+                title: "My API"
+            )
+        )
+        accounts = [deepseek, kimi, glm, openrouter, siliconflow, custom]
         states[deepseek.id] = AccountState(isRefreshing: false, lastSuccess: now, lastError: nil)
         states[kimi.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-420), lastError: nil)
         states[glm.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-120), lastError: nil)
         states[openrouter.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-260), lastError: nil)
         states[siliconflow.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-300), lastError: nil)
+        states[custom.id] = AccountState(isRefreshing: false, lastSuccess: now.addingTimeInterval(-180), lastError: nil)
 
         snapshots[deepseek.id] = ProviderSnapshot(
             fetchedAt: now,
@@ -524,6 +552,12 @@ final class AppStore {
             balance: BalanceSnapshot(currency: "CNY", total: 12.34, granted: nil, toppedUp: 20, isAvailable: true),
             quotas: [],
             planName: "SiliconFlow"
+        )
+        snapshots[custom.id] = ProviderSnapshot(
+            fetchedAt: now.addingTimeInterval(-180),
+            balance: BalanceSnapshot(currency: "CNY", total: 88.8, granted: nil, toppedUp: 88.8, isAvailable: true),
+            quotas: [],
+            planName: "My API"
         )
 
         let glmWeekly: [Double] = [98, 95, 93, 91, 89, 88]

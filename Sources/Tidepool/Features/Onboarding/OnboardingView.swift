@@ -105,7 +105,7 @@ struct OnboardingView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(ProviderID.allCases) { option in
+                ForEach(ProviderID.onboardingCases) { option in
                     providerCard(option)
                 }
             }
@@ -264,7 +264,7 @@ struct OnboardingView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 5) {
-                    Image(nsImage: StatusIconRenderer.menuBarIcon(provider: provider, colorMode: true, alert: false, offPeak: false))
+                    Image(nsImage: StatusIconRenderer.menuBarIcon(provider: provider, colorMode: true, alert: false))
                     Text(menuBarSample)
                         .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
@@ -442,6 +442,8 @@ struct OnboardingView: View {
                 "在 cloud.siliconflow.cn 的 API 密钥页面创建；余额以人民币计。",
                 "Create one on cloud.siliconflow.cn → API Keys; balance is in CNY."
             )
+        case .custom:
+            return T("自定义渠道在设置里配置。", "Configure custom providers in Settings.")
         }
     }
 

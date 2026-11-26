@@ -62,6 +62,16 @@ struct PopoverFooterView: View {
         )
     }
 
+    private var platformLink: URL? {
+        if account.provider == .custom {
+            guard let raw = account.custom?.endpoint,
+                  let url = URL(string: raw),
+                  url.scheme == "http" || url.scheme == "https" else { return nil }
+            return url
+        }
+        return account.provider.platformURL
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Picker(T("刷新间隔", "Refresh"), selection: intervalBinding) {
@@ -77,14 +87,16 @@ struct PopoverFooterView: View {
 
             Spacer()
 
-            Link(destination: account.provider.platformURL) {
-                HStack(spacing: 3) {
-                    Text(T("打开平台", "Open platform"))
-                    Image(systemName: "arrow.up.right")
+            if let link = platformLink {
+                Link(destination: link) {
+                    HStack(spacing: 3) {
+                        Text(T("打开平台", "Open platform"))
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .font(.caption)
                 }
-                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.secondary)
         }
     }
 }

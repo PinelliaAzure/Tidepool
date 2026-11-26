@@ -46,6 +46,10 @@ enum ProviderArtwork {
 </svg>
 """#
 
+    static let custom: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.9 2h2.2v6.2l4.4-4.4 1.6 1.6-4.4 4.4H21v2.2h-6.3l4.4 4.4-1.6 1.6-4.4-4.4V21h-2.2v-6.3l-4.4 4.4-1.6-1.6 4.4-4.4H3v-2.2h6.3L4.9 5.4l1.6-1.6 4.4 4.4V2z"/></svg>
+"""#
+
     static func svg(for provider: ProviderID) -> String? {
         switch provider {
         case .deepseek: return deepseek
@@ -54,6 +58,7 @@ enum ProviderArtwork {
         case .glm: return glm
         case .openrouter: return openrouter
         case .siliconFlow: return siliconflow
+        case .custom: return custom
         }
     }
 }
