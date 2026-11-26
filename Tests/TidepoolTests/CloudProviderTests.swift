@@ -138,7 +138,7 @@ struct CloudProviderTests {
           }
         }
         """
-        let snapshot = try TencentCloudCLIProvider.parse(try object(json))
+        let snapshot = try TencentCloudBalanceParser.parse(try object(json))
         let balance = try #require(snapshot.balance)
         #expect(balance.currency == "CNY")
         #expect(abs(balance.total - 123.45) < 0.001)
@@ -157,7 +157,7 @@ struct CloudProviderTests {
           "measure_id": 1
         }
         """
-        let snapshot = try HuaweiCloudCLIProvider.parse(try object(json))
+        let snapshot = try HuaweiCloudBalanceParser.parse(try object(json))
         let balance = try #require(snapshot.balance)
         #expect(abs(balance.total - 120.5) < 0.001)
         #expect(abs((balance.granted ?? 0) - 20) < 0.001)

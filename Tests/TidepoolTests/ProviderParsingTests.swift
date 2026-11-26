@@ -38,6 +38,22 @@ struct ProviderParsingTests {
         }
     }
 
+    @Test func deepSeekToleratesMissingOptionalBalances() throws {
+        let json = """
+        {
+          "is_available": true,
+          "balance_infos": [
+            { "currency": "CNY", "total_balance": "12.00" }
+          ]
+        }
+        """
+        let snapshot = try DeepSeekProvider().parse(Data(json.utf8))
+        let balance = try #require(snapshot.balance)
+        #expect(abs(balance.total - 12) < 0.001)
+        #expect((balance.granted ?? 0) == 0)
+        #expect((balance.toppedUp ?? 0) == 0)
+    }
+
     @Test func moonshotParsing() throws {
         let json = """
         {

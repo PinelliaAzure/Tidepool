@@ -39,4 +39,23 @@ struct SampleStoreTests {
         store.append(accountID: id, value: 40, now: now.addingTimeInterval(180))
         #expect(store.samples(for: id).count == 2)
     }
+
+    @Test func purgeRemovesOnlyTargetAccount() {
+        let store = SampleStore(persistent: false)
+        let removed = UUID()
+        let kept = UUID()
+        let now = Date()
+
+        store.append(accountID: removed, value: 10, now: now)
+        store.append(accountID: kept, value: 20, now: now)
+        store.appendQuota(accountID: removed, kind: .weekly, percent: 40, now: now)
+        store.appendQuota(accountID: kept, kind: .weekly, percent: 60, now: now)
+
+        store.purge(accountID: removed)
+
+        #expect(store.samples(for: removed).isEmpty)
+        #expect(store.quotaSamples(for: removed, kind: .weekly).isEmpty)
+        #expect(store.samples(for: kept).count == 1)
+        #expect(store.quotaSamples(for: kept, kind: .weekly).count == 1)
+    }
 }

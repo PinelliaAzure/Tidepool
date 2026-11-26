@@ -17,6 +17,11 @@ fi
 CONFIG="${1:-release}"
 swift build -c "$CONFIG"
 
+# 版本号单一来源：VERSION 文件；构建号取 git 提交数，可用环境变量覆盖。
+VERSION="$(tr -d '[:space:]' < VERSION 2>/dev/null || true)"
+VERSION="${TIDEPOOL_VERSION:-${VERSION:-0.0.0}}"
+BUILD_NUMBER="${TIDEPOOL_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
+
 APP_DIR="build/Tidepool.app"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
@@ -26,7 +31,7 @@ if [ -f "Resources/Tidepool.icns" ]; then
     cp "Resources/Tidepool.icns" "$APP_DIR/Contents/Resources/Tidepool.icns"
 fi
 
-cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
+cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -39,8 +44,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDisplayName</key><string>Tidepool</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>Tidepool</string>
-    <key>CFBundleShortVersionString</key><string>0.4.11</string>
-    <key>CFBundleVersion</key><string>15</string>
+    <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+    <key>CFBundleVersion</key><string>${BUILD_NUMBER}</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>

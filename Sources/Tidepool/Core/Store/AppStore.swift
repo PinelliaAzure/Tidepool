@@ -242,6 +242,7 @@ final class AppStore {
         snapshots[id] = nil
         states[id] = nil
         keychain.delete(id)
+        sampleStore.purge(accountID: id)
         if selectedAccountID == id {
             selectedAccountID = nil
         }
@@ -374,10 +375,7 @@ final class AppStore {
         guard let account = accounts.first(where: { $0.id == id }), account.enabled else { return false }
         guard force || states[id]?.isRefreshing != true else { return false }
         let storedKey = keychain.get(id) ?? ""
-        let allowsEmptyKey = account.provider.usesCLI
-            || account.provider.requiresCloudKeys
-            || (account.provider == .custom && account.custom?.authStyle == .none)
-        guard allowsEmptyKey || !storedKey.isEmpty else {
+        guard account.allowsEmptyAPIKey || !storedKey.isEmpty else {
             states[id]?.lastError = T("未配置 API Key", "API key not configured")
             notify()
             return false
@@ -433,9 +431,20 @@ final class AppStore {
     }
 
     func refreshAll(force: Bool = false) async {
-        for account in accounts where account.enabled {
-            await refresh(account.id, force: force)
+        let ids = accounts.filter(\.enabled).map(\.id)
+        await withTaskGroup(of: Void.self) { group in
+            for id in ids {
+                group.addTask { [weak self] in
+                    guard let self else { return }
+                    await self.refresh(id, force: force)
+                }
+            }
         }
+    }
+
+    /// 退出应用前把合并中的采样立即落盘。
+    func flushPendingWrites() {
+        sampleStore.flush()
     }
 
     private func persistAccounts() {

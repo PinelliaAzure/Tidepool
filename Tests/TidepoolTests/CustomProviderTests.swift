@@ -92,6 +92,26 @@ struct CustomProviderTests {
         }
     }
 
+    @Test func emptyKeyAllowedForNoAuthCustom() {
+        let noAuth = ProviderAccount(
+            provider: .custom,
+            name: "Public",
+            custom: CustomEndpointConfig(endpoint: "https://example.com/a", authStyle: .none)
+        )
+        #expect(noAuth.allowsEmptyAPIKey)
+
+        let bearer = ProviderAccount(
+            provider: .custom,
+            name: "Private",
+            custom: CustomEndpointConfig(endpoint: "https://example.com/a", authStyle: .bearer)
+        )
+        #expect(!bearer.allowsEmptyAPIKey)
+
+        #expect(ProviderAccount(provider: .volcengine, name: "Ark").allowsEmptyAPIKey)
+        #expect(ProviderAccount(provider: .tencent, name: "Tencent").allowsEmptyAPIKey)
+        #expect(!ProviderAccount(provider: .deepseek, name: "DeepSeek").allowsEmptyAPIKey)
+    }
+
     @Test func configRoundTrip() throws {
         let account = ProviderAccount(
             provider: .custom,

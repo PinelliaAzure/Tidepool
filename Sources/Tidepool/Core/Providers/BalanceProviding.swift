@@ -104,8 +104,8 @@ struct UnsupportedProvider: BalanceProviding {
     func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
         throw ProviderError.notSupported(
             T(
-                "\(provider.displayName) 的额度接口将在 M1 接入",
-                "\(provider.displayName) quota API is not implemented yet"
+                "\(provider.displayName) 的配置不完整，请在设置里补齐后再刷新。",
+                "\(provider.displayName) is not fully configured. Complete it in Settings and refresh."
             )
         )
     }

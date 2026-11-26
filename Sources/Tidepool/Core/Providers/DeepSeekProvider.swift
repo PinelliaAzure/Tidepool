@@ -22,8 +22,8 @@ struct DeepSeekProvider: BalanceProviding {
             balance: BalanceSnapshot(
                 currency: info.currency,
                 total: Double(info.totalBalance) ?? 0,
-                granted: Double(info.grantedBalance),
-                toppedUp: Double(info.toppedUpBalance),
+                granted: Double(info.grantedBalance ?? "0"),
+                toppedUp: Double(info.toppedUpBalance ?? "0"),
                 isAvailable: response.isAvailable ?? true
             ),
             quotas: [],
@@ -44,8 +44,9 @@ private struct DeepSeekBalanceResponse: Decodable {
     struct BalanceInfo: Decodable {
         let currency: String
         let totalBalance: String
-        let grantedBalance: String
-        let toppedUpBalance: String
+        // 官方文档未保证这两个字段始终存在，缺失时按 0 处理。
+        let grantedBalance: String?
+        let toppedUpBalance: String?
 
         enum CodingKeys: String, CodingKey {
             case currency

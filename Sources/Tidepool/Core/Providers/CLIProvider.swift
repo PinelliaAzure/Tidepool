@@ -410,19 +410,8 @@ struct AlibabaCLIProvider: BalanceProviding {
 
 // MARK: - 腾讯云账户余额
 
-struct TencentCloudCLIProvider: BalanceProviding {
-    func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
-        let json = try CLIExecutor.json(
-            tool: "tccli",
-            arguments: ["billing", "DescribeAccountBalance", "--cli-region", "ap-guangzhou", "--output", "json"],
-            installHint: T(
-                "先运行 pip install tccli，再执行 tccli configure。",
-                "Run pip install tccli, then tccli configure."
-            )
-        )
-        return try Self.parse(json)
-    }
-
+/// 腾讯云账单 JSON 解析（直连签名复用）。
+enum TencentCloudBalanceParser {
     static func parse(_ json: Any) throws -> ProviderSnapshot {
         guard let root = json as? [String: Any],
               let response = root["Response"] as? [String: Any] else {
@@ -457,19 +446,8 @@ struct TencentCloudCLIProvider: BalanceProviding {
 
 // MARK: - 华为云账户余额
 
-struct HuaweiCloudCLIProvider: BalanceProviding {
-    func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
-        let json = try CLIExecutor.json(
-            tool: "hcloud",
-            arguments: ["BSS", "ShowCustomerAccountBalances", "--cli-region", "cn-north-1"],
-            installHint: T(
-                "先安装华为云 KooCLI，再执行 hcloud configure init。",
-                "Install Huawei Cloud KooCLI, then run hcloud configure init."
-            )
-        )
-        return try Self.parse(json)
-    }
-
+/// 华为云账单 JSON 解析（直连签名复用）。
+enum HuaweiCloudBalanceParser {
     static func parse(_ json: Any) throws -> ProviderSnapshot {
         guard let root = json as? [String: Any] else {
             throw ProviderError.network(T("响应不是 JSON 对象", "Response is not a JSON object"))

@@ -5,7 +5,7 @@ import Foundation
 /// 国际站 `GET https://api.siliconflow.com/v1/user/info` 仍可用，余额以 USD 计。
 struct SiliconFlowProvider: BalanceProviding {
     func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
-        let base = baseURL ?? URL(string: "https://api.siliconflow.cn")!
+        let base = baseURL ?? URL(string: "https://api.siliconflow.com")!
         do {
             let data = try await APIClient().getJSON(
                 url: base.appendingPathComponent("v1/user/info"),

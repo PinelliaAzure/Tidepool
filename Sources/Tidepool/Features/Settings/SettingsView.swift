@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.11"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -520,12 +520,12 @@ struct ProviderRowView: View {
         case .siliconFlow:
             return [
                 RegionOption(
-                    label: T("国内 · siliconflow.cn", "China · siliconflow.cn"),
-                    url: URL(string: "https://api.siliconflow.cn")!
-                ),
-                RegionOption(
                     label: T("国际 · siliconflow.com", "Global · siliconflow.com"),
                     url: URL(string: "https://api.siliconflow.com")!
+                ),
+                RegionOption(
+                    label: T("国内 · siliconflow.cn（已下线）", "China · siliconflow.cn (retired)"),
+                    url: URL(string: "https://api.siliconflow.cn")!
                 )
             ]
         default:
@@ -767,8 +767,8 @@ struct ProviderRowView: View {
         switch account.provider {
         case .volcengine: return T("需要安装并登录 arkcli", "Install and sign in to arkcli")
         case .alibaba: return T("需要安装并登录 bl", "Install and sign in to bl")
-        case .tencent: return T("需要安装并配置 tccli", "Install and configure tccli")
-        case .huawei: return T("需要安装并配置 hcloud", "Install and configure hcloud")
+        case .tencent: return T("填写 SecretId / SecretKey（存钥匙串）", "Enter SecretId / SecretKey (stored in the Keychain)")
+        case .huawei: return T("填写 Access Key / Secret Key（存钥匙串）", "Enter Access Key / Secret Key (stored in the Keychain)")
         default: return ""
         }
     }

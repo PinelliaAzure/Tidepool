@@ -85,7 +85,7 @@ struct TencentCloudProvider: BalanceProviding {
            let message = error["Message"] as? String {
             throw ProviderError.notSupported(message)
         }
-        return try TencentCloudCLIProvider.parse(json)
+        return try TencentCloudBalanceParser.parse(json)
     }
 
     /// TC3 签名：中间派生密钥必须保持二进制，不能转成十六进制字符串。
@@ -169,7 +169,7 @@ struct HuaweiCloudProvider: BalanceProviding {
         guard let json = try? JSONSerialization.jsonObject(with: data) else {
             throw ProviderError.network(T("响应不是 JSON", "Response is not JSON"))
         }
-        return try HuaweiCloudCLIProvider.parse(json)
+        return try HuaweiCloudBalanceParser.parse(json)
     }
 
     /// 华为云 SDK-HMAC-SHA256。官方 SDK 的 CanonicalURI 会补结尾 `/`，

@@ -106,7 +106,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .kimiCode: return URL(string: "https://api.kimi.com")!
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .openrouter: return URL(string: "https://openrouter.ai")!
-        case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
+        // 国内站 /v1/user/info 已于 2026-08-14 下线（HTTP 410），默认走国际站。
+        case .siliconFlow: return URL(string: "https://api.siliconflow.com")!
         case .volcengine: return URL(string: "https://ark.cn-beijing.volces.com")!
         case .alibaba: return URL(string: "https://dashscope.aliyuncs.com")!
         case .tencent: return URL(string: "https://billing.tencentcloudapi.com")!
@@ -191,6 +192,15 @@ struct ProviderAccount: Codable, Identifiable, Equatable {
         sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         custom = try container.decodeIfPresent(CustomEndpointConfig.self, forKey: .custom)
+    }
+}
+
+extension ProviderAccount {
+    /// 不需要 API Key 即可刷新：CLI / 云账号凭证渠道，以及「无鉴权」的自定义接口。
+    var allowsEmptyAPIKey: Bool {
+        provider.usesCLI
+            || provider.requiresCloudKeys
+            || (provider == .custom && custom?.authStyle == CustomAuthStyle.none)
     }
 }
 

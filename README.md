@@ -100,7 +100,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 83 个单元测试（Swift Testing）
+make test         # 88 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -119,7 +119,11 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 ```
 
 > 纯 Command Line Tools 环境下，macOS 27 SDK 缺少 SwiftUI 宏插件（`SwiftUIMacros`），
-> `Makefile` / `build-app.sh` 会自动回退到 MacOSX26.5 SDK；安装了完整 Xcode 则无需处理。
+> `Makefile` / `build-app.sh` 会自动回退到 MacOSX26.5 SDK（裸 `swift run` 仍会失败，
+> 预览请用 `make preview`）；安装了完整 Xcode 则无需处理。
+>
+> 发布版本号以仓库根目录的 `VERSION` 文件为单一来源，`build-app.sh` 会把它写进
+> `Info.plist` 的 `CFBundleShortVersionString`（构建号取 git 提交数，可用 `TIDEPOOL_BUILD` 覆盖）。
 
 ## 数据来源
 

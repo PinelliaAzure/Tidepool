@@ -449,9 +449,9 @@ struct OnboardingView: View {
         case .alibaba:
             return T("在设置里添加后，安装并登录阿里云百炼 CLI（bl）。", "Add it in Settings, then install and sign in to the Bailian CLI (bl).")
         case .tencent:
-            return T("在设置里添加后，安装并配置腾讯云 CLI（tccli）。", "Add it in Settings, then install and configure tccli.")
+            return T("在设置里添加后，填写 SecretId / SecretKey（存钥匙串）。", "Add it in Settings, then enter your SecretId / SecretKey (stored in the Keychain).")
         case .huawei:
-            return T("在设置里添加后，安装并配置华为云 KooCLI（hcloud）。", "Add it in Settings, then install and configure Huawei Cloud KooCLI (hcloud).")
+            return T("在设置里添加后，填写 Access Key / Secret Key（存钥匙串）。", "Add it in Settings, then enter your Access Key / Secret Key (stored in the Keychain).")
         }
     }
 
@@ -508,8 +508,8 @@ struct OnboardingView: View {
             ]
         case .siliconFlow:
             return [
-                RegionOption(label: T("国内 · siliconflow.cn", "China · siliconflow.cn"), url: URL(string: "https://api.siliconflow.cn")!),
-                RegionOption(label: T("国际 · siliconflow.com", "Global · siliconflow.com"), url: URL(string: "https://api.siliconflow.com")!)
+                RegionOption(label: T("国际 · siliconflow.com", "Global · siliconflow.com"), url: URL(string: "https://api.siliconflow.com")!),
+                RegionOption(label: T("国内 · siliconflow.cn（已下线）", "China · siliconflow.cn (retired)"), url: URL(string: "https://api.siliconflow.cn")!)
             ]
         default:
             return []
@@ -520,7 +520,7 @@ struct OnboardingView: View {
         switch provider {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .moonshot: return URL(string: "https://api.moonshot.cn")!
-        case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
+        case .siliconFlow: return URL(string: "https://api.siliconflow.com")!
         default: return provider.defaultBaseURL
         }
     }
