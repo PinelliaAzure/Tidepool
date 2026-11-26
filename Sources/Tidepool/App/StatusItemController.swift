@@ -23,6 +23,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         popover.animates = true
 
         if let button = statusItem.button {
+            button.target = self
             button.action = #selector(handleButtonClick(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.imagePosition = .imageLeading
@@ -67,6 +68,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             popover.performClose(nil)
             return
         }
+        showPopover()
+    }
+
+#if DEBUG
+    func simulateStatusItemClick() {
+        statusItem.button?.performClick(nil)
+    }
+#endif
+
+    /// 打开面板（供点击与调试使用）。
+    func showPopover() {
         guard let button = statusItem.button else { return }
         if popoverController == nil {
             let controller = NSHostingController(
@@ -80,6 +92,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             popoverController = controller
             popover.contentViewController = controller
         }
+        popover.contentSize = NSSize(width: 388, height: 720)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
 

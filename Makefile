@@ -13,7 +13,7 @@ ifeq ($(XCODE_APPS),)
   endif
 endif
 
-.PHONY: build test run app clean
+.PHONY: build test run app dmg clean
 
 build:
 	swift build
@@ -26,6 +26,9 @@ run:
 
 app:
 	./build-app.sh
+
+dmg:
+	./Scripts/make-dmg.sh
 
 clean:
 	swift package clean

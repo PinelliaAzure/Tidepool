@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
