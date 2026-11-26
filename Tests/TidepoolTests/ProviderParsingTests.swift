@@ -112,4 +112,36 @@ struct AdditionalProviderTests {
         #expect(abs((balance.toppedUp ?? 0) - 20) < 0.001)
         #expect(balance.isAvailable)
     }
+
+    @Test func siliconFlowInternationalCurrency() throws {
+        let json = """
+        {
+          "code": 20000,
+          "status": true,
+          "data": {
+            "balance": "1.20",
+            "chargeBalance": "10.00",
+            "totalBalance": "1.20"
+          }
+        }
+        """
+        let snapshot = try SiliconFlowProvider().parse(Data(json.utf8), currency: "USD")
+        let balance = try #require(snapshot.balance)
+        #expect(balance.currency == "USD")
+        #expect(abs(balance.total - 1.20) < 0.001)
+    }
+
+    @Test func siliconFlowRetiredEndpointMessage() {
+        let json = """
+        { "code": 20092, "status": false, "message": "This endpoint is deprecated and is no longer available.", "data": null }
+        """
+        do {
+            _ = try SiliconFlowProvider().parse(Data(json.utf8))
+            Issue.record("expected a deprecation error")
+        } catch let error as ProviderError {
+            #expect(error.errorDescription?.contains("2026-08-14") == true)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
 }

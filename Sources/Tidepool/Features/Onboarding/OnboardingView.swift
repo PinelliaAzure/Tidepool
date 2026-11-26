@@ -439,8 +439,8 @@ struct OnboardingView: View {
             )
         case .siliconFlow:
             return T(
-                "在 cloud.siliconflow.cn 的 API 密钥页面创建；余额以人民币计。",
-                "Create one on cloud.siliconflow.cn → API Keys; balance is in CNY."
+                "国内站余额接口已下线；国际站 Key 请选 siliconflow.com（USD）。国内余额请到 cloud.siliconflow.cn 查看。",
+                "The China balance API is retired; for a global account choose siliconflow.com (USD). Check China balances at cloud.siliconflow.cn."
             )
         case .custom:
             return T("自定义渠道在设置里配置。", "Configure custom providers in Settings.")
@@ -486,7 +486,7 @@ struct OnboardingView: View {
     }
 
     private var supportsRegion: Bool {
-        provider == .moonshot || provider == .glm
+        provider == .moonshot || provider == .glm || provider == .siliconFlow
     }
 
     private struct RegionOption {
@@ -506,6 +506,11 @@ struct OnboardingView: View {
                 RegionOption(label: T("智谱 · bigmodel.cn", "Zhipu · bigmodel.cn"), url: URL(string: "https://open.bigmodel.cn")!),
                 RegionOption(label: T("国际 · z.ai", "Global · z.ai"), url: URL(string: "https://api.z.ai")!)
             ]
+        case .siliconFlow:
+            return [
+                RegionOption(label: T("国内 · siliconflow.cn", "China · siliconflow.cn"), url: URL(string: "https://api.siliconflow.cn")!),
+                RegionOption(label: T("国际 · siliconflow.com", "Global · siliconflow.com"), url: URL(string: "https://api.siliconflow.com")!)
+            ]
         default:
             return []
         }
@@ -515,6 +520,7 @@ struct OnboardingView: View {
         switch provider {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .moonshot: return URL(string: "https://api.moonshot.cn")!
+        case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
         default: return provider.defaultBaseURL
         }
     }

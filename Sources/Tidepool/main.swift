@@ -31,6 +31,8 @@ if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
             ("tidepool-deepseek-color.png", .deepseek, true, false),
             ("tidepool-deepseek-mono.png", .deepseek, false, false),
             ("tidepool-kimi.png", .moonshot, true, false),
+            ("tidepool-kimicode-color.png", .kimiCode, true, false),
+            ("tidepool-kimicode-mono.png", .kimiCode, false, false),
             ("tidepool-glm.png", .glm, true, false),
             ("tidepool-openrouter.png", .openrouter, true, false),
             ("tidepool-siliconflow.png", .siliconFlow, true, false)

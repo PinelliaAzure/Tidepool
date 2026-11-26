@@ -65,7 +65,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .kimiCode: return T("Kimi For Coding 套餐额度", "Kimi For Coding quota")
         case .glm: return T("GLM Coding Plan 额度", "GLM Coding Plan quota")
         case .openrouter: return T("API 余额（USD）", "API credits (USD)")
-        case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
+        case .siliconFlow: return T("API 余额（国际站 USD）", "API credits (global USD)")
         case .volcengine: return T("Coding Plan 额度（arkcli）", "Coding Plan quota (arkcli)")
         case .alibaba: return T("额度或余额（bl / AK/SK）", "Quota or balance (bl / AK/SK)")
         case .tencent: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
@@ -116,8 +116,11 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     }
 
     /// 首次引导只展示开箱即用的渠道。
+    /// SiliconFlow 国内站余额接口已下线，暂不放进首次引导（仍可在设置里添加并选国际站）。
     static var onboardingCases: [ProviderID] {
-        allCases.filter { !$0.usesCLI && !$0.requiresCloudKeys && $0 != .custom }
+        allCases.filter {
+            !$0.usesCLI && !$0.requiresCloudKeys && $0 != .custom && $0 != .siliconFlow
+        }
     }
 
     /// 依赖本机官方 CLI（登录后读取额度），不保存 API Key。

@@ -31,10 +31,65 @@ enum ProviderIconRenderer {
               let base = NSImage(data: data) else { return nil }
 
         let tint = colorMode ? provider.nsBrandColor : NSColor.black
-        let image = tinted(base, color: tint, size: size)
+        let tintedImage = tinted(base, color: tint, size: size)
+        let image = provider == .kimiCode
+            ? withCodeBadge(tintedImage, colorMode: colorMode, size: size)
+            : tintedImage
         image.isTemplate = !colorMode
         cache[key] = image
         return image
+    }
+
+    /// Kimi Code 与 Kimi 共用同一个螺旋 logo，右下角加一个 `</>` 角标区分。
+    /// 彩色模式：白底 + 品牌色代码符号；单色模式：挖空螺旋再描代码符号，跟随菜单栏着色。
+    private static func withCodeBadge(_ base: NSImage, colorMode: Bool, size: CGFloat) -> NSImage {
+        raster(size: NSSize(width: size, height: size)) { rect in
+            base.draw(in: rect)
+
+            let diameter = size * 0.62
+            let badge = NSRect(x: size - diameter, y: 0, width: diameter, height: diameter)
+
+            if colorMode {
+                NSColor.white.setFill()
+                NSBezierPath(ovalIn: badge).fill()
+            } else {
+                NSGraphicsContext.current?.compositingOperation = .destinationOut
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: badge).fill()
+                NSGraphicsContext.current?.compositingOperation = .sourceOver
+            }
+
+            drawCodeGlyph(
+                in: badge.insetBy(dx: diameter * 0.06, dy: diameter * 0.06),
+                color: colorMode ? ProviderID.kimiCode.nsBrandColor : .black
+            )
+        }
+    }
+
+    private static func drawCodeGlyph(in rect: NSRect, color: NSColor) {
+        let path = NSBezierPath()
+
+        func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+            NSPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
+        }
+
+        // <
+        path.move(to: point(0.30, 0.70))
+        path.line(to: point(0.07, 0.50))
+        path.line(to: point(0.30, 0.30))
+        // >
+        path.move(to: point(0.70, 0.70))
+        path.line(to: point(0.93, 0.50))
+        path.line(to: point(0.70, 0.30))
+        // /
+        path.move(to: point(0.56, 0.80))
+        path.line(to: point(0.44, 0.20))
+
+        path.lineWidth = max(0.8, rect.width * 0.12)
+        path.lineCapStyle = .round
+        path.lineJoinStyle = .round
+        color.setStroke()
+        path.stroke()
     }
 
     /// Tidepool 的 App 标记：T + 三个 Provider 点。

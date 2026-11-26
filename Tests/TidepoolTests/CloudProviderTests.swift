@@ -118,6 +118,16 @@ struct ProviderArtworkTests {
         }
         #expect(ProviderIconRenderer.appMark(size: 18) != nil)
     }
+
+    @Test @MainActor func kimiCodeIconHasCodeBadge() throws {
+        for colorMode in [true, false] {
+            let kimi = try #require(ProviderIconRenderer.icon(for: .moonshot, colorMode: colorMode, size: 18))
+            let kimiCode = try #require(ProviderIconRenderer.icon(for: .kimiCode, colorMode: colorMode, size: 18))
+            let kimiData = try #require(kimi.tiffRepresentation)
+            let codeData = try #require(kimiCode.tiffRepresentation)
+            #expect(kimiData != codeData)
+        }
+    }
 }
 
 @Suite("云凭据")

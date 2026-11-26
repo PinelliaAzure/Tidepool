@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.7"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.8"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -465,7 +465,9 @@ struct ProviderRowView: View {
     }
 
     private var supportsRegionPicker: Bool {
-        account.provider == .moonshot || account.provider == .glm
+        account.provider == .moonshot
+            || account.provider == .glm
+            || account.provider == .siliconFlow
     }
 
     private struct RegionOption: Hashable {
@@ -497,6 +499,17 @@ struct ProviderRowView: View {
                     url: URL(string: "https://api.z.ai")!
                 )
             ]
+        case .siliconFlow:
+            return [
+                RegionOption(
+                    label: T("国内 · siliconflow.cn", "China · siliconflow.cn"),
+                    url: URL(string: "https://api.siliconflow.cn")!
+                ),
+                RegionOption(
+                    label: T("国际 · siliconflow.com", "Global · siliconflow.com"),
+                    url: URL(string: "https://api.siliconflow.com")!
+                )
+            ]
         default:
             return []
         }
@@ -513,6 +526,11 @@ struct ProviderRowView: View {
             return T(
                 "Coding Plan Key 与站点必须匹配；额度接口为只读。",
                 "The Coding Plan key must match the region; quota APIs are read-only."
+            )
+        case .siliconFlow:
+            return T(
+                "国内站余额接口已于 2026-08-14 下线；国际站请选 siliconflow.com（USD）。Key 与站点必须匹配。",
+                "The China balance API was retired on 2026-08-14; for a global account choose siliconflow.com (USD). The key must match the region."
             )
         case .kimiCode:
             return T(
