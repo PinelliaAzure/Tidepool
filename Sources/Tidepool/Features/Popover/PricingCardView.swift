@@ -9,7 +9,7 @@ struct PricingCardView: View {
             let status = ProviderPricing.status(for: schedule)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    Text("计价时段").sectionHeader()
+                    Text(T("计价时段", "Pricing window")).sectionHeader()
                     Spacer()
                     Text(status.currentLabel)
                         .font(.caption2.weight(.semibold))
@@ -34,8 +34,8 @@ struct PricingCardView: View {
                     Spacer()
                     Text(
                         status.isOffPeak
-                            ? "\(TideFormatter.countdownShort(to: status.nextTransition))后恢复标准价"
-                            : "\(TideFormatter.countdownShort(to: status.nextTransition))后进入闲时"
+                            ? T("\(TideFormatter.countdownShort(to: status.nextTransition))后恢复标准价", "Standard price in \(TideFormatter.countdownShort(to: status.nextTransition))")
+                            : T("\(TideFormatter.countdownShort(to: status.nextTransition))后进入闲时", "Off-peak in \(TideFormatter.countdownShort(to: status.nextTransition))")
                     )
                     .font(.caption2)
                     .foregroundStyle(.tertiary)

@@ -16,6 +16,7 @@ final class AppStore {
     private(set) var colorLogo: Bool
     private(set) var menuBarStyle: MenuBarStyle
     private(set) var notificationsEnabled: Bool
+    private(set) var resetAlertsEnabled: Bool
     private(set) var privacyMode: Bool
     private(set) var showPricing: Bool
 
@@ -49,6 +50,7 @@ final class AppStore {
         colorLogo = Prefs.colorLogo
         menuBarStyle = Prefs.menuBarStyle
         notificationsEnabled = Prefs.notificationsEnabled
+        resetAlertsEnabled = Prefs.resetAlertsEnabled
         privacyMode = Prefs.privacyMode
         showPricing = Prefs.showPricing
         keychain = KeychainStore()
@@ -67,7 +69,7 @@ final class AppStore {
     /// 启动后台调度（App 启动完成后调用一次）。
     func bootstrap() {
         scheduler.attach(self)
-        if notificationsEnabled {
+        if notificationsEnabled || resetAlertsEnabled {
             NotificationManager.shared.requestAuthorization()
         }
     }
@@ -120,7 +122,7 @@ final class AppStore {
     var menuBarContent: MenuBarContent {
         let visible = visibleAccounts
         guard !visible.isEmpty else {
-            return MenuBarContent(text: nil, accent: nil, alert: false, offPeak: false, tooltip: "Tidepool — 点击添加 Provider")
+            return MenuBarContent(text: nil, accent: nil, alert: false, offPeak: false, tooltip: T("Tidepool — 点击添加 Provider", "Tidepool — click to add a provider"))
         }
 
         var text: String?
@@ -165,7 +167,7 @@ final class AppStore {
             if let error = states[account.id]?.lastError {
                 tooltip += " · ⚠︎ \(error)"
             } else if let ok = states[account.id]?.lastSuccess {
-                tooltip += " · 更新于 \(TideFormatter.relative(ok) ?? "")"
+                tooltip += T(" · 更新于 \(TideFormatter.relative(ok) ?? "")", " · updated \(TideFormatter.relative(ok) ?? "")")
             }
         }
         if let pricing {
@@ -244,7 +246,7 @@ final class AppStore {
         do {
             try keychain.set(key, for: id)
         } catch {
-            states[id]?.lastError = "钥匙串写入失败"
+            states[id]?.lastError = T("钥匙串写入失败", "Keychain write failed")
         }
         notify()
     }
@@ -264,7 +266,16 @@ final class AppStore {
     func setNotificationsEnabled(_ enabled: Bool) {
         notificationsEnabled = enabled
         Prefs.notificationsEnabled = enabled
-        if enabled {
+        if enabled || resetAlertsEnabled {
+            NotificationManager.shared.requestAuthorization()
+        }
+        notify()
+    }
+
+    func setResetAlertsEnabled(_ enabled: Bool) {
+        resetAlertsEnabled = enabled
+        Prefs.resetAlertsEnabled = enabled
+        if enabled || notificationsEnabled {
             NotificationManager.shared.requestAuthorization()
         }
         notify()
@@ -296,11 +307,29 @@ final class AppStore {
         let target = index + offset
         guard accounts.indices.contains(target) else { return }
         accounts.swapAt(index, target)
-        for i in accounts.indices {
-            accounts[i].sortOrder = i
-        }
+        renumberAccounts()
         persistAccounts()
         notify()
+    }
+
+    /// 拖拽排序：把某个账户移动到另一个账户之前。
+    func moveAccount(id: UUID, before targetID: UUID) {
+        guard id != targetID,
+              let sourceIndex = accounts.firstIndex(where: { $0.id == id }),
+              let targetIndex = accounts.firstIndex(where: { $0.id == targetID }) else { return }
+
+        let account = accounts.remove(at: sourceIndex)
+        let insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
+        accounts.insert(account, at: insertIndex)
+        renumberAccounts()
+        persistAccounts()
+        notify()
+    }
+
+    private func renumberAccounts() {
+        for index in accounts.indices {
+            accounts[index].sortOrder = index
+        }
     }
 
     func selectAccount(id: UUID?) {
@@ -332,7 +361,7 @@ final class AppStore {
         guard let account = accounts.first(where: { $0.id == id }), account.enabled else { return false }
         guard force || states[id]?.isRefreshing != true else { return false }
         guard let key = keychain.get(id), !key.isEmpty else {
-            states[id]?.lastError = "未配置 API Key"
+            states[id]?.lastError = T("未配置 API Key", "API key not configured")
             notify()
             return false
         }
@@ -365,7 +394,8 @@ final class AppStore {
                 NotificationManager.shared.evaluate(
                     account: account,
                     snapshot: snapshot,
-                    enabled: notificationsEnabled
+                    enabled: notificationsEnabled,
+                    includeReset: resetAlertsEnabled
                 )
             }
             notify()

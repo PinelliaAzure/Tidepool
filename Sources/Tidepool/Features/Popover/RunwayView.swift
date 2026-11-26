@@ -11,13 +11,13 @@ struct RunwayView: View {
             currentBalance: store.snapshots[account.id]?.balance?.total ?? 0
         )
         VStack(alignment: .leading, spacing: 10) {
-            Text("消耗与余量").sectionHeader()
+            Text(T("消耗与余量", "Spend & runway")).sectionHeader()
             HStack(spacing: 0) {
-                metric("今日消耗", value: report.todaySpend.map(money) ?? "—")
+                metric(T("今日消耗", "Today"), value: report.todaySpend.map(money) ?? "—")
                 divider
-                metric("7 天日均", value: report.dailyBurn.map(money) ?? "—")
+                metric(T("7 天日均", "7-day avg"), value: report.dailyBurn.map(money) ?? "—")
                 divider
-                metric("预计可用", value: report.daysLeft.map { TideFormatter.duration(days: $0) } ?? "暂无消耗")
+                metric(T("预计可用", "Runway"), value: report.daysLeft.map { TideFormatter.duration(days: $0) } ?? T("暂无消耗", "No spend yet"))
             }
         }
         .glassCard()
@@ -64,11 +64,11 @@ struct PopoverFooterView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Picker("刷新间隔", selection: intervalBinding) {
-                Text("1 分钟").tag(60)
-                Text("5 分钟").tag(300)
-                Text("10 分钟").tag(600)
-                Text("30 分钟").tag(1800)
+            Picker(T("刷新间隔", "Refresh"), selection: intervalBinding) {
+                Text(T("1 分钟", "1 min")).tag(60)
+                Text(T("5 分钟", "5 min")).tag(300)
+                Text(T("10 分钟", "10 min")).tag(600)
+                Text(T("30 分钟", "30 min")).tag(1800)
             }
             .pickerStyle(.menu)
             .labelsHidden()
@@ -79,7 +79,7 @@ struct PopoverFooterView: View {
 
             Link(destination: account.provider.platformURL) {
                 HStack(spacing: 3) {
-                    Text("打开平台")
+                    Text(T("打开平台", "Open platform"))
                     Image(systemName: "arrow.up.right")
                 }
                 .font(.caption)

@@ -30,12 +30,16 @@ struct GLMProvider: BalanceProviding {
         let response = try JSONDecoder().decode(GLMQuotaResponse.self, from: data)
         if response.success == false {
             if let message = response.msg, message.lowercased().contains("coding plan") {
-                throw ProviderError.notSupported("该 Key 没有有效的 GLM Coding Plan")
+                throw ProviderError.notSupported(
+                    T("该 Key 没有有效的 GLM Coding Plan", "This key has no active GLM Coding Plan")
+                )
             }
             throw ProviderError.invalidKey
         }
         guard let payload = response.data, let limits = payload.limits, !limits.isEmpty else {
-            throw ProviderError.notSupported("该 Key 没有可读取的 GLM Coding Plan 额度")
+            throw ProviderError.notSupported(
+                T("该 Key 没有可读取的 GLM Coding Plan 额度", "No GLM Coding Plan quota found for this key")
+            )
         }
 
         // unit=3：5 小时窗口；unit=6：周额度；TIME_LIMIT：网页工具（MCP）月度额度
@@ -77,7 +81,9 @@ struct GLMProvider: BalanceProviding {
         }
 
         guard !quotas.isEmpty else {
-            throw ProviderError.notSupported("该 Key 没有可读取的 GLM Coding Plan 额度")
+            throw ProviderError.notSupported(
+                T("该 Key 没有可读取的 GLM Coding Plan 额度", "No GLM Coding Plan quota found for this key")
+            )
         }
 
         let level = payload.level.map { $0.prefix(1).uppercased() + $0.dropFirst() }

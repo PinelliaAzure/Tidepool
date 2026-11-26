@@ -52,43 +52,61 @@ enum TideFormatter {
     /// runway 天数 → "13 天" / "3.4 天" / "8 小时" / "25 分钟"。
     static func duration(days: Double) -> String {
         if days >= 1 {
-            return days >= 10 ? "\(Int(days)) 天" : String(format: "%.1f 天", days)
+            if days >= 10 {
+                return L10n.isEnglish ? "\(Int(days)) days" : "\(Int(days)) 天"
+            }
+            return L10n.isEnglish
+                ? String(format: "%.1f days", days)
+                : String(format: "%.1f 天", days)
         }
         let hours = days * 24
         if hours >= 1 {
-            return String(format: "%.0f 小时", hours)
+            return L10n.isEnglish
+                ? String(format: "%.0f hours", hours)
+                : String(format: "%.0f 小时", hours)
         }
-        return String(format: "%.0f 分钟", hours * 60)
+        let minutes = hours * 60
+        return L10n.isEnglish
+            ? String(format: "%.0f min", minutes)
+            : String(format: "%.0f 分钟", minutes)
     }
 
-    /// 额度重置倒计时 → "2 小时 18 分后重置" / "3 天 4 小时后重置"。
+    /// 额度重置倒计时 → "2 小时 18 分后重置" / "resets in 2h 18m"。
     static func countdown(to date: Date, now: Date = Date()) -> String {
         let interval = date.timeIntervalSince(now)
-        guard interval > 0 else { return "已重置" }
-        return countdownShort(to: date, now: now) + "后重置"
+        guard interval > 0 else { return T("已重置", "reset") }
+        let short = countdownShort(to: date, now: now)
+        return L10n.isEnglish ? "resets in \(short)" : short + "后重置"
     }
 
-    /// 不带后缀的倒计时 → "8 小时 19 分" / "45 分钟" / "3 天 2 小时"。
+    /// 不带后缀的倒计时 → "8 小时 19 分" / "8h 19m"。
     static func countdownShort(to date: Date, now: Date = Date()) -> String {
         let interval = date.timeIntervalSince(now)
-        guard interval > 0 else { return "即将" }
+        guard interval > 0 else { return T("即将", "soon") }
         let totalMinutes = Int((interval / 60).rounded(.up))
         if totalMinutes >= 1440 {
             let days = totalMinutes / 1440
             let hours = (totalMinutes % 1440) / 60
+            if L10n.isEnglish {
+                return hours > 0 ? "\(days)d \(hours)h" : "\(days)d"
+            }
             return hours > 0 ? "\(days) 天 \(hours) 小时" : "\(days) 天"
         }
         if totalMinutes >= 60 {
             let hours = totalMinutes / 60
             let minutes = totalMinutes % 60
+            if L10n.isEnglish {
+                return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
+            }
             return minutes > 0 ? "\(hours) 小时 \(minutes) 分" : "\(hours) 小时"
         }
-        return "\(totalMinutes) 分钟"
+        return L10n.isEnglish ? "\(totalMinutes)m" : "\(totalMinutes) 分钟"
     }
 
     /// "11月26日 14:30"
     static func resetDateText(_ date: Date) -> String {
-        shortDateTimeFormatter.string(from: date)
+        let formatter = L10n.isEnglish ? englishDateFormatter : chineseDateFormatter
+        return formatter.string(from: date)
     }
 
     /// 紧凑 token 数：1.2M / 86.2k / 932
@@ -106,19 +124,25 @@ enum TideFormatter {
         }
     }
 
+    /// 图表横轴："11/22"（中英通用，省空间）
+    static func axisDate(_ date: Date) -> String {
+        axisDateFormatter.string(from: date)
+    }
+
     /// 美元估算：$1.23 / <$0.01
     static func usd(_ value: Double) -> String {
         if value > 0 && value < 0.01 { return "<$0.01" }
         return String(format: "$%.2f", value)
     }
 
-    /// "10 分钟前"；一分钟内显示"刚刚"。
+    /// "刚刚" / "10 分钟前"。
     static func relative(_ date: Date?, now: Date = Date()) -> String? {
         guard let date else { return nil }
         if abs(now.timeIntervalSince(date)) < 60 {
-            return "刚刚"
+            return T("刚刚", "just now")
         }
-        return relativeFormatter.localizedString(for: date, relativeTo: now)
+        let formatter = L10n.isEnglish ? englishRelativeFormatter : chineseRelativeFormatter
+        return formatter.localizedString(for: date, relativeTo: now)
     }
 
     // MARK: - Private
@@ -135,16 +159,38 @@ enum TideFormatter {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "zh-Hans")
+    private static let axisDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "M/d"
         return formatter
     }()
 
-    private static let shortDateTimeFormatter: DateFormatter = {
+    private static let chineseRelativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "zh-Hans")
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
+
+    private static let englishRelativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
+
+    private static let chineseDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh-Hans")
         formatter.dateFormat = "M月d日 HH:mm"
+        return formatter
+    }()
+
+    private static let englishDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateFormat = "MMM d, HH:mm"
         return formatter
     }()
 }

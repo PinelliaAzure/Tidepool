@@ -105,13 +105,13 @@ struct EmptyStateView: View {
             Image(nsImage: StatusIconRenderer.whaleIcon(size: 84, tint: .secondaryLabelColor))
                 .padding(.top, 8)
             VStack(spacing: 4) {
-                Text("潮池还是空的")
+                Text(T("潮池还是空的", "Your tidepool is empty"))
                     .font(.headline)
-                Text("添加一个 Provider，把余额放进菜单栏")
+                Text(T("添加一个 Provider，把余额放进菜单栏", "Add a provider to put your balance in the menu bar"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Button("添加 Provider") {
+            Button(T("添加 Provider", "Add provider")) {
                 store.requestSettings()
             }
             .buttonStyle(.borderedProminent)

@@ -37,7 +37,7 @@ struct BalanceHeroView: View {
                             .font(.system(size: 40, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                     }
-                    Text("可用余额")
+                    Text(T("可用余额", "Available balance"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -93,9 +93,9 @@ struct BalanceHeroView: View {
             }
             .frame(height: 5)
             HStack {
-                Text(privacyMask("赠送 \(TideFormatter.money(granted, currency: currencyCode, style: .hero))"))
+                Text(privacyMask(T("赠送 ", "Granted ") + TideFormatter.money(granted, currency: currencyCode, style: .hero)))
                 Spacer()
-                Text(privacyMask("充值 \(TideFormatter.money(toppedUp, currency: currencyCode, style: .hero))"))
+                Text(privacyMask(T("充值 ", "Topped up ") + TideFormatter.money(toppedUp, currency: currencyCode, style: .hero)))
             }
             .font(.caption2)
             .foregroundStyle(.secondary)

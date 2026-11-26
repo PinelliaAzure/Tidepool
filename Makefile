@@ -4,8 +4,9 @@
 # SwiftUIMacros 插件，因此自动回退到 MacOSX26.5 SDK（安装了完整 Xcode 则不需要）。
 
 CLT_SDKS := /Library/Developer/CommandLineTools/SDKs
+XCODE_APPS := $(wildcard /Applications/Xcode*.app)
 
-ifeq ($(wildcard /Applications/Xcode.app),)
+ifeq ($(XCODE_APPS),)
   FALLBACK_SDK := $(lastword $(sort $(wildcard $(CLT_SDKS)/MacOSX2[0-6]*.sdk)))
   ifneq ($(FALLBACK_SDK),)
     export SDKROOT := $(FALLBACK_SDK)

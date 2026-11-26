@@ -4,6 +4,8 @@ import Testing
 
 @Suite("额度节奏判断")
 struct QuotaPaceTests {
+    init() { L10n.overrideEnglish = false }
+
     private func quota(kind: QuotaKind, remaining: Double, resetIn: TimeInterval) -> QuotaWindow {
         QuotaWindow(
             kind: kind,

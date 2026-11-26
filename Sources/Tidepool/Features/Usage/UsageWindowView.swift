@@ -9,11 +9,12 @@ struct UsageWindowView: View {
     @Environment(AppStore.self) private var appStore
     @State private var period: Period = .month
 
-    enum Period: String, CaseIterable, Identifiable {
-        case week = "7 天"
-        case month = "30 天"
-        var id: String { rawValue }
+    enum Period: CaseIterable, Identifiable {
+        case week
+        case month
+        var id: String { self == .week ? "week" : "month" }
         var days: Int { self == .week ? 7 : 30 }
+        var title: String { self == .week ? T("7 天", "7 days") : T("30 天", "30 days") }
     }
 
     var body: some View {
@@ -45,16 +46,16 @@ struct UsageWindowView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("本地用量")
+                Text(T("本地用量", "Local usage"))
                     .font(.system(size: 20, weight: .semibold))
-                Text("只读取本机会话文件，不上传任何内容")
+                Text(T("只读取本机会话文件，不上传任何内容", "Reads local session files only. Nothing is uploaded."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Picker("范围", selection: $period) {
+            Picker(T("范围", "Range"), selection: $period) {
                 ForEach(Period.allCases) { option in
-                    Text(option.rawValue).tag(option)
+                    Text(option.title).tag(option)
                 }
             }
             .pickerStyle(.segmented)
@@ -67,9 +68,9 @@ struct UsageWindowView: View {
                 Image(systemName: "arrow.clockwise")
             }
             .disabled(usageStore.isScanning)
-            .help("重新扫描本地会话")
+            .help(T("重新扫描本地会话", "Rescan local sessions"))
 
-            Button("导出 CSV") {
+            Button(T("导出 CSV", "Export CSV")) {
                 exportCSV()
             }
             .disabled(usageStore.records.isEmpty)
@@ -81,11 +82,11 @@ struct UsageWindowView: View {
     private func metrics(_ summary: UsageSummary) -> some View {
         let days = period.days
         return HStack(spacing: 10) {
-            metricCard("总 Tokens", value: TideFormatter.tokens(summary.totalTokens(days: days)))
-            metricCard("估算费用", value: costText(summary.totalCost(days: days)))
-            metricCard("请求数", value: "\(summary.requests(days: days))")
+            metricCard(T("总 Tokens", "Total tokens"), value: TideFormatter.tokens(summary.totalTokens(days: days)))
+            metricCard(T("估算费用", "Est. cost"), value: costText(summary.totalCost(days: days)))
+            metricCard(T("请求数", "Requests"), value: "\(summary.requests(days: days))")
             metricCard(
-                "缓存命中率",
+                T("缓存命中率", "Cache hit rate"),
                 value: summary.cacheHitRate(days: days).map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
             )
         }
@@ -110,28 +111,28 @@ struct UsageWindowView: View {
         let rows = summary.dailyModels(days: period.days, limit: 5)
         let modelList = summary.models(days: period.days)
         let topModels = modelList.prefix(5).map(\.model)
-        let domain = Array(topModels) + (rows.contains { $0.model == "其他" } ? ["其他"] : [])
+        let domain = Array(topModels) + (rows.contains { $0.model == T("其他", "Other") } ? [T("其他", "Other")] : [])
         let colors = domain.map { label -> Color in
-            if label == "其他" { return Color(hex: 0x9CA3AF) }
+            if label == T("其他", "Other") { return Color(hex: 0x9CA3AF) }
             let provider = modelList.first(where: { $0.model == label })?.provider ?? ""
             return color(forProvider: provider)
         }
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("每日用量").sectionHeader()
+                Text(T("每日用量", "Daily usage")).sectionHeader()
                 Spacer()
-                Text("按模型堆叠")
+                Text(T("按模型堆叠", "Stacked by model"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
             Chart(rows) { row in
                 BarMark(
-                    x: .value("日期", row.day, unit: .day),
+                    x: .value(T("日期", "Date"), row.day, unit: .day),
                     y: .value("Tokens", row.tokens)
                 )
-                .foregroundStyle(by: .value("模型", row.model))
+                .foregroundStyle(by: .value(T("模型", "Model"), row.model))
                 .cornerRadius(2)
             }
             .chartForegroundStyleScale(domain: domain, range: colors)
@@ -141,7 +142,7 @@ struct UsageWindowView: View {
                     AxisGridLine().foregroundStyle(Color.primary.opacity(0.05))
                     AxisValueLabel {
                         if let date = value.as(Date.self) {
-                            Text(date, format: .dateTime.month().day())
+                            Text(TideFormatter.axisDate(date))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -172,7 +173,7 @@ struct UsageWindowView: View {
         let total = max(1, summary.totalTokens(days: period.days))
 
         return VStack(alignment: .leading, spacing: 10) {
-            Text("模型拆分").sectionHeader()
+            Text(T("模型拆分", "Models")).sectionHeader()
 
             ForEach(Array(models.enumerated()), id: \.element.id) { _, model in
                 VStack(alignment: .leading, spacing: 4) {
@@ -211,7 +212,7 @@ struct UsageWindowView: View {
 
     private func sourcesCard(_ summary: UsageSummary) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("数据来源").sectionHeader()
+            Text(T("数据来源", "Sources")).sectionHeader()
 
             ForEach(summary.tools(days: period.days)) { tool in
                 HStack {
@@ -228,7 +229,7 @@ struct UsageWindowView: View {
                 .opacity(0.4)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("扫描路径")
+                Text(T("扫描路径", "Scanned paths"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Text("~/.local/share/opencode")
@@ -247,12 +248,12 @@ struct UsageWindowView: View {
 
     private var footer: some View {
         HStack {
-            Text("费用为本地估算，仅供参考；OpenCode 使用其自身记录的费用。")
+            Text(T("费用为本地估算，仅供参考；OpenCode 使用其自身记录的费用。", "Costs are local estimates; OpenCode costs come from its own records."))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
             Spacer()
             if let scan = usageStore.lastScan {
-                Text("更新于 \(TideFormatter.relative(scan) ?? "")")
+                Text(T("更新于 \(TideFormatter.relative(scan) ?? "")", "Updated \(TideFormatter.relative(scan) ?? "")"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -265,13 +266,13 @@ struct UsageWindowView: View {
             Image(systemName: "chart.bar.doc.horizontal")
                 .font(.system(size: 34, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("还没有找到本地会话记录")
+            Text(T("还没有找到本地会话记录", "No local sessions found yet"))
                 .font(.headline)
-            Text("Tidepool 会读取 OpenCode、Claude Code、Codex 的本地会话文件；\n如果你还没用过它们，这里会保持为空。")
+            Text(T("Tidepool 会读取 OpenCode、Claude Code、Codex 的本地会话文件；\n如果你还没用过它们，这里会保持为空。", "Tidepool reads local OpenCode, Claude Code, and Codex sessions.\nIf you haven't used them yet, this stays empty."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("立即重新扫描") {
+            Button(T("立即重新扫描", "Rescan now")) {
                 usageStore.refresh()
             }
             .controlSize(.small)
@@ -327,7 +328,7 @@ final class UsageWindowController {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "Tidepool · 本地用量"
+            window.title = T("Tidepool · 本地用量", "Tidepool · Local usage")
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 720, height: 580)
             window.contentView = NSHostingView(

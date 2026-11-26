@@ -4,6 +4,8 @@ import Testing
 
 @Suite("金额与时长格式化")
 struct TideFormatterTests {
+    init() { L10n.overrideEnglish = false }
+
     @Test func menuBarMoneyFormat() {
         #expect(TideFormatter.money(42.5, currency: "CNY", style: .menuBar) == "¥42.50")
         #expect(TideFormatter.money(1284, currency: "CNY", style: .menuBar) == "¥1,284")

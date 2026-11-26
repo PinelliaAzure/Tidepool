@@ -1,5 +1,7 @@
 # Tidepool 🐋
 
+[![CI](https://github.com/PinelliaAzure/Tidepool/actions/workflows/ci.yml/badge.svg)](https://github.com/PinelliaAzure/Tidepool/actions/workflows/ci.yml)
+
 > Your AI budget, at a glance. · 让每一分余额，都有潮汐。
 
 macOS 菜单栏里的大模型余额与余量仪表盘：鲸鱼旁边是你的余额，点开是一整片玻璃面板。
@@ -16,6 +18,7 @@ macOS 菜单栏里的大模型余额与余量仪表盘：鲸鱼旁边是你的�
 - **本地用量**：读取 OpenCode / Claude Code / Codex 的本机会话，按模型 / 工具拆分 tokens 与估算费用，支持 CSV
 - **隐私优先**：Key 只进钥匙串，数据只落本机，无遥测；一键隐私模式隐藏金额
 - **原生质感**：AppKit + SwiftUI，跟随 Liquid Glass / 明暗 / 降低透明度
+- **中英双语**：跟随系统语言，也可在设置里手动切换（重启生效）
 
 | 本地用量 | 首次启动 |
 |---|---|
@@ -28,7 +31,7 @@ macOS 菜单栏里的大模型余额与余量仪表盘：鲸鱼旁边是你的�
 - 三种展示方式：当前 Provider / 全部紧凑 / 最紧张的一项
 - 单色模板图标（自动适配壁纸与明暗）或彩色品牌图标
 - DeepSeek 闲时时鲸鱼右上角出现月亮角标，tooltip 显示下次切换时间
-- 低余额时鲸鱼出现告警点；右键菜单可刷新、打开用量、切换隐私模式、检查更新
+- Provider 支持拖拽排序；低余额时鲸鱼出现告警点；右键菜单可刷新、打开用量、切换隐私模式、检查更新
 
 ### 面板
 - Provider 胶囊 Tab、Hero 余额、赠送 / 充值构成条
@@ -56,6 +59,13 @@ DeepSeek 官方规则（2026-11）：
 - 余额 < ¥10 或额度 < 10% 时发系统通知，每个周期只提醒一次，重启不重复
 - 隐私模式隐藏菜单栏金额、余额、图表刻度、runway 与费用
 
+## 下载
+
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.0.dmg` 与 `.zip`。
+
+> 发布包为 ad-hoc 签名，未做 Apple 公证。首次打开若被 Gatekeeper 拦截：
+> 右键 App →「打开」，或执行 `xattr -dr com.apple.quarantine /Applications/Tidepool.app`。
+
 ## 安装与运行
 
 需要 macOS 14+ 与 Swift 5.9+（完整 Xcode 或 Command Line Tools 均可）。
@@ -64,7 +74,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 40 个单元测试（Swift Testing）
+make test         # 46 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -125,8 +135,8 @@ Sources/Tidepool/
 - **M0 ✅** 菜单栏 + 玻璃面板 + DeepSeek / Kimi 余额 + 潮汐图 + runway
 - **M1 ✅** GLM / Kimi Code 额度 + 双环 + 节奏 + 通知 + 菜单栏多模式 + Provider 排序
 - **M2 ✅** Onboarding + 本地用量（OpenCode / Claude Code / Codex）+ CSV + 额度历史 + 隐私模式 + DeepSeek 闲时计价
-- **M3 ✅（本地部分）** 应用图标、检查更新入口、测试与文档
-- **M3 ⏳（需要账号）** Developer ID 签名 + 公证、Sparkle appcast、Homebrew Cask
+- **M3（本地）✅** 拖拽排序、重置前提醒、中英双语、应用图标、检查更新入口
+- **M3 ⏳（需要账号/仓库）** Developer ID 签名 + 公证、Sparkle appcast、Homebrew Cask
   - 先改 `Sources/Tidepool/Core/Updates/UpdateChecker.swift` 里的仓库地址
   - 证书与 notarytool 凭据就绪后，在 `build-app.sh` 基础上补签名 / 公证步骤
 

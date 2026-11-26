@@ -37,6 +37,6 @@ struct RingGauge: View {
         }
         .frame(width: size, height: size)
         .accessibilityElement()
-        .accessibilityLabel("剩余 \(Int((progress * 100).rounded()))%")
+        .accessibilityLabel(T("剩余 \(Int((progress * 100).rounded()))%", "\(Int((progress * 100).rounded()))% left"))
     }
 }

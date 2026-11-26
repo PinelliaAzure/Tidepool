@@ -67,6 +67,21 @@ enum Prefs {
         }
         set { defaults.set(newValue, forKey: "pricing.showInMenuBar") }
     }
+
+    /// 额度重置前提醒，默认开启。
+    static var resetAlertsEnabled: Bool {
+        get {
+            if defaults.object(forKey: "alerts.reset") == nil { return true }
+            return defaults.bool(forKey: "alerts.reset")
+        }
+        set { defaults.set(newValue, forKey: "alerts.reset") }
+    }
+
+    /// 界面语言，重启生效。
+    static var language: AppLanguage {
+        get { AppLanguage(rawValue: defaults.string(forKey: "ui.language") ?? "") ?? .system }
+        set { defaults.set(newValue.rawValue, forKey: "ui.language") }
+    }
 }
 
 // MARK: - 本地持久化（Application Support/Tidepool）

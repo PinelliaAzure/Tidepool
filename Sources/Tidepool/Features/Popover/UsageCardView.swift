@@ -10,13 +10,13 @@ struct UsageCardView: View {
             let summary = usageStore.summary
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("本地用量").sectionHeader()
+                    Text(T("本地用量", "Local usage")).sectionHeader()
                     Spacer()
                     Button {
                         appStore.requestUsage()
                     } label: {
                         HStack(spacing: 2) {
-                            Text("明细")
+                            Text(T("明细", "Details"))
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 8, weight: .semibold))
                         }
@@ -27,12 +27,12 @@ struct UsageCardView: View {
                 }
 
                 HStack(spacing: 0) {
-                    metric("近 7 天", TideFormatter.tokens(summary.totalTokens(days: 7)))
+                    metric(T("近 7 天", "Last 7 days"), TideFormatter.tokens(summary.totalTokens(days: 7)))
                     divider
-                    metric("估算费用", costText(summary.totalCost(days: 7)))
+                    metric(T("估算费用", "Est. cost"), costText(summary.totalCost(days: 7)))
                     divider
                     metric(
-                        "缓存命中",
+                        T("缓存命中", "Cache hit"),
                         summary.cacheHitRate(days: 7).map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
                     )
                 }

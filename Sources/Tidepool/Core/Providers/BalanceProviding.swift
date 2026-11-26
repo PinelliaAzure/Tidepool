@@ -11,10 +11,10 @@ enum ProviderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidKey: return "API Key 无效或已过期"
-        case .rateLimited: return "请求过于频繁，已自动退避"
-        case .http(let code): return "服务返回错误（HTTP \(code)）"
-        case .network(let message): return "网络错误：\(message)"
+        case .invalidKey: return T("API Key 无效或已过期", "Invalid or expired API key")
+        case .rateLimited: return T("请求过于频繁，已自动退避", "Rate limited — backing off")
+        case .http(let code): return T("服务返回错误（HTTP \(code)）", "Server error (HTTP \(code))")
+        case .network(let message): return T("网络错误：\(message)", "Network error: \(message)")
         case .notSupported(let message): return message
         }
     }
@@ -47,7 +47,7 @@ struct APIClient {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                throw ProviderError.network("无效的服务响应")
+                throw ProviderError.network(T("无效的服务响应", "Invalid server response"))
             }
             switch http.statusCode {
             case 200..<300:
@@ -88,6 +88,11 @@ struct UnsupportedProvider: BalanceProviding {
     let provider: ProviderID
 
     func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
-        throw ProviderError.notSupported("\(provider.displayName) 的额度接口将在 M1 接入")
+        throw ProviderError.notSupported(
+            T(
+                "\(provider.displayName) 的额度接口将在 M1 接入",
+                "\(provider.displayName) quota API is not implemented yet"
+            )
+        )
     }
 }

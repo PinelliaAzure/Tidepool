@@ -5,7 +5,7 @@ set -euo pipefail
 # 纯 Command Line Tools 环境：macOS 27 SDK 的 SwiftUI 需要缺失的宏插件，
 # 回退到 MacOSX26.5 SDK。安装了完整 Xcode 时不做处理。
 CLT_SDKS="/Library/Developer/CommandLineTools/SDKs"
-if [ -z "${SDKROOT:-}" ] && [ ! -d "/Applications/Xcode.app" ]; then
+if [ -z "${SDKROOT:-}" ] && ! ls -d /Applications/Xcode*.app >/dev/null 2>&1; then
     for candidate in "$CLT_SDKS"/MacOSX26.5.sdk "$CLT_SDKS"/MacOSX26.sdk; do
         if [ -d "$candidate" ]; then
             export SDKROOT="$candidate"
@@ -39,8 +39,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDisplayName</key><string>Tidepool</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>Tidepool</string>
-    <key>CFBundleShortVersionString</key><string>0.3.0</string>
-    <key>CFBundleVersion</key><string>3</string>
+    <key>CFBundleShortVersionString</key><string>0.4.0</string>
+    <key>CFBundleVersion</key><string>4</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>

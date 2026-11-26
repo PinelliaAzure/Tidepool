@@ -51,7 +51,7 @@ enum ProviderLabel {
         case "anthropic": return "Anthropic"
         case "openai": return "OpenAI"
         case "opencode": return "OpenCode"
-        default: return key.isEmpty ? "其他" : key
+        default: return key.isEmpty ? T("其他", "Other") : key
         }
     }
 }
@@ -152,7 +152,7 @@ struct UsageSummary: Equatable {
         var buckets: [String: Int] = [:]
         for record in scoped {
             let day = calendar.startOfDay(for: record.date)
-            let label = topModels.contains(record.model) ? record.model : "其他"
+            let label = topModels.contains(record.model) ? record.model : T("其他", "Other")
             let key = "\(day.timeIntervalSince1970)|\(label)"
             buckets[key, default: 0] += record.totalTokens
         }

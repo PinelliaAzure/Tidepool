@@ -73,7 +73,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Tidepool")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
-                Text("把 AI 余额放进菜单栏")
+                Text(T("把 AI 余额放进菜单栏", "AI balances in your menu bar"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -97,9 +97,9 @@ struct OnboardingView: View {
 
     private var welcomeStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("先添加一个 Provider")
+            Text(T("先添加一个 Provider", "Add your first provider"))
                 .font(.system(size: 15, weight: .semibold))
-            Text("余额型显示账户里还剩多少钱，套餐型显示 5 小时 / 每周还能用多少。之后可以随时在设置里添加更多。")
+            Text(T("余额型显示账户里还剩多少钱，套餐型显示 5 小时 / 每周还能用多少。之后可以随时在设置里添加更多。", "Balance providers show how much credit is left; plan providers show 5-hour and weekly quotas. You can add more later in Settings."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -160,7 +160,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Circle().fill(provider.brandColor).frame(width: 8, height: 8)
-                Text("\(provider.displayName) 的 API Key")
+                Text(T("\(provider.displayName) 的 API Key", "\(provider.displayName) API key"))
                     .font(.system(size: 15, weight: .semibold))
             }
             Text(keyHint)
@@ -169,7 +169,7 @@ struct OnboardingView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if supportsRegion {
-                Picker("站点", selection: $regionURL) {
+                Picker(T("站点", "Region"), selection: $regionURL) {
                     ForEach(regions, id: \.url) { option in
                         Text(option.label).tag(option.url)
                     }
@@ -179,13 +179,13 @@ struct OnboardingView: View {
                 .fixedSize()
             }
 
-            SecureField("粘贴 API Key", text: $keyInput)
+            SecureField(T("粘贴 API Key", "Paste API key"), text: $keyInput)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 13, design: .monospaced))
                 .onSubmit { test() }
 
             HStack(spacing: 8) {
-                Button(isTesting ? "测试中…" : "测试连接") {
+                Button(isTesting ? T("测试中…", "Testing…") : T("测试连接", "Test connection")) {
                     test()
                 }
                 .disabled(keyInput.count < 8 || isTesting)
@@ -204,16 +204,16 @@ struct OnboardingView: View {
     private var resultCard: some View {
         if let snapshot = preview {
             VStack(alignment: .leading, spacing: 7) {
-                Label("连接成功", systemImage: "checkmark.circle.fill")
+                Label(T("连接成功", "Connected"), systemImage: "checkmark.circle.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.green)
                 if let balance = snapshot.balance {
-                    Text("余额 \(TideFormatter.money(balance.total, currency: balance.currency, style: .hero))")
+                    Text(T("余额 ", "Balance ") + TideFormatter.money(balance.total, currency: balance.currency, style: .hero))
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                 }
                 ForEach(snapshot.sortedQuotas) { quota in
                     HStack {
-                        Text("\(quota.kind.displayName)额度")
+                        Text(T("\(quota.kind.displayName)额度", "\(quota.kind.displayName) quota"))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -245,7 +245,7 @@ struct OnboardingView: View {
                         .fill(Color.orange.opacity(0.08))
                 )
         } else {
-            Text("Key 只保存进 macOS 钥匙串，Tidepool 只做只读查询。")
+            Text(T("Key 只保存进 macOS 钥匙串，Tidepool 只做只读查询。", "Keys stay in the macOS Keychain. Tidepool only makes read-only requests."))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -255,14 +255,14 @@ struct OnboardingView: View {
 
     private var menuBarStep: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("菜单栏想怎么显示？")
+            Text(T("菜单栏想怎么显示？", "How should the menu bar look?"))
                 .font(.system(size: 15, weight: .semibold))
-            Text("之后可以在 Settings → 菜单栏 随时切换。")
+            Text(T("之后可以在 Settings → 菜单栏 随时切换。", "You can change this later in Settings → Menu bar."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("预览")
+                Text(T("预览", "Preview"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 5) {
@@ -325,7 +325,7 @@ struct OnboardingView: View {
     private var footer: some View {
         HStack(spacing: 10) {
             if step == .welcome {
-                Button("跳过，稍后设置") {
+                Button(T("跳过，稍后设置", "Skip for now")) {
                     Prefs.onboardingDone = true
                     onSkip?()
                 }
@@ -333,7 +333,7 @@ struct OnboardingView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             } else {
-                Button("上一步") {
+                Button(T("上一步", "Back")) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                         step = Step(rawValue: step.rawValue - 1) ?? .welcome
                     }
@@ -343,7 +343,7 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Button(step == .menuBar ? "开始使用" : "继续") {
+            Button(step == .menuBar ? T("开始使用", "Get started") : T("继续", "Continue")) {
                 advance()
             }
             .buttonStyle(.borderedProminent)
@@ -414,10 +414,26 @@ struct OnboardingView: View {
 
     private var keyHint: String {
         switch provider {
-        case .deepseek: return "在 platform.deepseek.com 的 API Keys 页面创建，仅用于读取余额。"
-        case .moonshot: return "在 platform.moonshot.cn（国际站 platform.kimi.ai）创建；站点与 Key 必须匹配。"
-        case .glm: return "在 open.bigmodel.cn 或 z.ai 的 Coding Plan 页面获取 Key。"
-        case .kimiCode: return "在 platform.kimi.com 的 Kimi For Coding 页面获取 Coding Key（sk-…）。"
+        case .deepseek:
+            return T(
+                "在 platform.deepseek.com 的 API Keys 页面创建，仅用于读取余额。",
+                "Create one on platform.deepseek.com → API Keys; it is only used to read your balance."
+            )
+        case .moonshot:
+            return T(
+                "在 platform.moonshot.cn（国际站 platform.kimi.ai）创建；站点与 Key 必须匹配。",
+                "Create one on platform.moonshot.cn (global: platform.kimi.ai); the key must match the region."
+            )
+        case .glm:
+            return T(
+                "在 open.bigmodel.cn 或 z.ai 的 Coding Plan 页面获取 Key。",
+                "Get a key from the Coding Plan page on open.bigmodel.cn or z.ai."
+            )
+        case .kimiCode:
+            return T(
+                "在 platform.kimi.com 的 Kimi For Coding 页面获取 Coding Key（sk-…）。",
+                "Get a Coding key (sk-…) from Kimi For Coding on platform.kimi.com."
+            )
         }
     }
 
@@ -442,9 +458,12 @@ struct OnboardingView: View {
 
     private func styleDescription(_ option: MenuBarStyle) -> String {
         switch option {
-        case .single: return "只显示当前 Provider，最干净"
-        case .all: return "所有 Provider 并排显示，信息最全"
-        case .tightest: return "只显示剩余最少的那一项，最省空间"
+        case .single:
+            return T("只显示当前 Provider，最干净", "Only the current provider — cleanest")
+        case .all:
+            return T("所有 Provider 并排显示，信息最全", "All providers side by side — most information")
+        case .tightest:
+            return T("只显示剩余最少的那一项，最省空间", "Only the tightest quota — smallest footprint")
         }
     }
 
@@ -461,13 +480,13 @@ struct OnboardingView: View {
         switch provider {
         case .moonshot:
             return [
-                RegionOption(label: "国内 · moonshot.cn", url: URL(string: "https://api.moonshot.cn")!),
-                RegionOption(label: "国际 · moonshot.ai", url: URL(string: "https://api.moonshot.ai")!)
+                RegionOption(label: T("国内 · moonshot.cn", "China · moonshot.cn"), url: URL(string: "https://api.moonshot.cn")!),
+                RegionOption(label: T("国际 · moonshot.ai", "Global · moonshot.ai"), url: URL(string: "https://api.moonshot.ai")!)
             ]
         case .glm:
             return [
-                RegionOption(label: "智谱 · bigmodel.cn", url: URL(string: "https://open.bigmodel.cn")!),
-                RegionOption(label: "国际 · z.ai", url: URL(string: "https://api.z.ai")!)
+                RegionOption(label: T("智谱 · bigmodel.cn", "Zhipu · bigmodel.cn"), url: URL(string: "https://open.bigmodel.cn")!),
+                RegionOption(label: T("国际 · z.ai", "Global · z.ai"), url: URL(string: "https://api.z.ai")!)
             ]
         default:
             return []

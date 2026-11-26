@@ -16,7 +16,7 @@ struct QuotaHeroView: View {
             header(snapshot)
 
             if primaryQuotas.isEmpty {
-                Text("正在读取套餐额度…")
+                Text(T("正在读取套餐额度…", "Reading plan quota…"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -96,7 +96,7 @@ struct QuotaHeroView: View {
                     Text(TideFormatter.percent(quota.remainingPercent))
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                    Text("剩余")
+                    Text(T("剩余", "left"))
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
                 }
@@ -136,7 +136,7 @@ struct QuotaHeroView: View {
     private func monthlyRow(_ quota: QuotaWindow) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text("网页工具 · 本月")
+                Text(T("网页工具 · 本月", "Web tools · monthly"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -164,19 +164,19 @@ struct QuotaHeroView: View {
     private func historyChart(_ points: [QuotaSamplePoint]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("本周额度走势")
+                Text(T("本周额度走势", "Weekly quota trend"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("近 7 天")
+                Text(T("近 7 天", "Last 7 days"))
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }
 
             Chart(points) { point in
                 AreaMark(
-                    x: .value("时间", point.date),
-                    y: .value("剩余", point.remainingPercent)
+                    x: .value(T("时间", "Time"), point.date),
+                    y: .value(T("剩余", "Remaining"), point.remainingPercent)
                 )
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(
@@ -188,8 +188,8 @@ struct QuotaHeroView: View {
                 )
 
                 LineMark(
-                    x: .value("时间", point.date),
-                    y: .value("剩余", point.remainingPercent)
+                    x: .value(T("时间", "Time"), point.date),
+                    y: .value(T("剩余", "Remaining"), point.remainingPercent)
                 )
                 .interpolationMethod(.catmullRom)
                 .foregroundStyle(account.provider.brandColor)

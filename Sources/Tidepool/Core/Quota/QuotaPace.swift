@@ -18,14 +18,28 @@ enum QuotaPace {
         let usedFraction = 1 - quota.remainingFraction
         let delta = usedFraction - elapsedFraction
 
-        let detail = "时间过去 \(TideFormatter.percent(elapsedFraction * 100)) · 已用 \(TideFormatter.percent(usedFraction * 100))"
+        let detail = L10n.isEnglish
+            ? "\(TideFormatter.percent(elapsedFraction * 100)) elapsed · \(TideFormatter.percent(usedFraction * 100)) used"
+            : "时间过去 \(TideFormatter.percent(elapsedFraction * 100)) · 已用 \(TideFormatter.percent(usedFraction * 100))"
 
         if delta > 0.08 {
-            return Status(text: "节奏偏快，按当前速度会提前用完", detail: detail, isFast: true)
+            return Status(
+                text: T("节奏偏快，按当前速度会提前用完", "Ahead of pace — may run out early"),
+                detail: detail,
+                isFast: true
+            )
         }
         if delta < -0.08 {
-            return Status(text: "节奏从容，略慢于时间进度", detail: detail, isFast: false)
+            return Status(
+                text: T("节奏从容，略慢于时间进度", "Comfortable — slower than the clock"),
+                detail: detail,
+                isFast: false
+            )
         }
-        return Status(text: "节奏正常，与时间进度一致", detail: detail, isFast: false)
+        return Status(
+            text: T("节奏正常，与时间进度一致", "On pace with the clock"),
+            detail: detail,
+            isFast: false
+        )
     }
 }

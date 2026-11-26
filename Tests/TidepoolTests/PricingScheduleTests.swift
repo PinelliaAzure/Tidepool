@@ -4,6 +4,8 @@ import Testing
 
 @Suite("DeepSeek 计价时段")
 struct PricingScheduleTests {
+    init() { L10n.overrideEnglish = false }
+
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!

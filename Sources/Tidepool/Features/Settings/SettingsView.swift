@@ -1,89 +1,137 @@
+import AppKit
 import SwiftUI
-import ServiceManagement
+import UniformTypeIdentifiers
 
-/// 设置窗口：Providers 管理 + 菜单栏 + 提醒 + 通用 + 关于。
+/// 设置窗口：服务与账号 + 菜单栏 + 提醒 + 本地用量 + 通用 + 关于。
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
+    @State private var draggingID: UUID?
 
     var body: some View {
         Form {
-            Section("服务与账号") {
+            Section(T("服务与账号", "Services & accounts")) {
                 ForEach(store.accounts) { account in
-                    ProviderRowView(account: account)
+                    ProviderRowView(account: account, draggingID: $draggingID)
+                        .onDrop(
+                            of: [UTType.text],
+                            delegate: ProviderDropDelegate(
+                                target: account,
+                                store: store,
+                                draggingID: $draggingID
+                            )
+                        )
                 }
                 addProviderMenu
             }
 
-            Section("菜单栏") {
-                Picker("展示方式", selection: styleBinding) {
+            Section(T("菜单栏", "Menu bar")) {
+                Picker(T("展示方式", "Display mode"), selection: styleBinding) {
                     ForEach(MenuBarStyle.allCases) { style in
                         Text(style.title).tag(style)
                     }
                 }
                 if store.menuBarStyle == .single {
-                    Picker("显示的 Provider", selection: selectedBinding) {
-                        Text("自动（第一个）").tag(UUID?.none)
+                    Picker(T("显示的 Provider", "Menu bar provider"), selection: selectedBinding) {
+                        Text(T("自动（第一个）", "Automatic (first)")).tag(UUID?.none)
                         ForEach(store.visibleAccounts) { account in
                             Text(account.name).tag(UUID?.some(account.id))
                         }
                     }
                 }
-                Toggle("使用彩色品牌图标", isOn: colorBinding)
-                Text("关闭时使用单色模板图标，自动适配浅色 / 深色菜单栏。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Toggle("显示计价时段", isOn: pricingBinding)
-                Text("DeepSeek 工作日高峰为标准价，其余时段 5 折；闲时在鲸鱼右上角显示月亮。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Toggle(T("使用彩色品牌图标", "Color brand icon"), isOn: colorBinding)
+                Text(T(
+                    "关闭时使用单色模板图标，自动适配浅色 / 深色菜单栏。",
+                    "Off uses a monochrome template icon that adapts to light and dark menu bars."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                Toggle(T("显示计价时段", "Show pricing window"), isOn: pricingBinding)
+                Text(T(
+                    "DeepSeek 工作日高峰为标准价，其余时段 5 折；闲时在鲸鱼右上角显示月亮。",
+                    "DeepSeek charges standard rates during weekday peak hours and 50% off otherwise; a moon appears on the whale during off-peak."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
-            Section("提醒") {
-                Toggle("低余额 / 低额度通知", isOn: notificationBinding)
-                Text("余额低于 ¥10 或任一额度低于 10% 时提醒；每个额度周期只提醒一次。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            Section(T("提醒", "Alerts")) {
+                Toggle(T("低余额 / 低额度通知", "Low balance / quota alerts"), isOn: notificationBinding)
+                Text(T(
+                    "余额低于 ¥10 或任一额度低于 10% 时提醒；每个额度周期只提醒一次。",
+                    "Alerts when the balance drops below ¥10 or any quota drops below 10%; once per cycle."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Toggle(T("额度重置前提醒", "Quota reset reminders"), isOn: resetAlertBinding)
+                Text(T(
+                    "额度将在 1 小时内重置时提醒一次，避免浪费剩余额度。",
+                    "Alerts once when a quota resets within an hour, so leftover quota doesn't go to waste."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
-            Section("本地用量") {
-                Toggle("扫描本地会话统计 Tokens", isOn: usageBinding)
+            Section(T("本地用量", "Local usage")) {
+                Toggle(T("扫描本地会话统计 Tokens", "Scan local sessions for tokens"), isOn: usageBinding)
                 HStack {
-                    Button("打开用量明细…") {
+                    Button(T("打开用量明细…", "Open usage details…")) {
                         UsageWindowController.shared.show()
                     }
                     .controlSize(.small)
                     Spacer()
                 }
-                Text("读取 OpenCode / Claude Code / Codex 的本地会话，只统计 token 与费用，不上传。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(T(
+                    "读取 OpenCode / Claude Code / Codex 的本地会话，只统计 token 与费用，不上传。",
+                    "Reads local OpenCode / Claude Code / Codex sessions. Token and cost stats stay on this Mac."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
-            Section("通用") {
-                Toggle("隐私模式（隐藏金额）", isOn: privacyBinding)
-                Toggle("登录时启动", isOn: launchBinding)
+            Section(T("通用", "General")) {
+                Picker(T("语言", "Language"), selection: languageBinding) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.title).tag(language)
+                    }
+                }
+                HStack {
+                    Text(T("切换语言后需要重启 Tidepool 生效。", "Restart Tidepool to apply the language change."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(T("立即重启", "Restart now")) {
+                        relaunch()
+                    }
+                    .controlSize(.small)
+                }
+                Toggle(T("隐私模式（隐藏金额）", "Privacy mode (hide amounts)"), isOn: privacyBinding)
+                Toggle(T("登录时启动", "Launch at login"), isOn: launchBinding)
             }
 
-            Section("关于") {
+            Section(T("关于", "About")) {
                 LabeledContent(
-                    "版本",
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
+                    T("版本", "Version"),
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0"
                 )
                 HStack {
-                    Button("重新运行首次引导…") {
+                    Button(T("重新运行首次引导…", "Run onboarding again…")) {
                         Prefs.onboardingDone = false
                         OnboardingWindowController.shared.show(force: true)
                     }
                     .controlSize(.small)
-                    Button("检查更新…") {
+                    Button(T("检查更新…", "Check for updates…")) {
                         UpdateChecker.openReleases()
                     }
                     .controlSize(.small)
                     Spacer()
                 }
-                Text("所有数据仅保存在本机，API Key 存储在 macOS 钥匙串中；应用不包含任何遥测。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(T(
+                    "所有数据仅保存在本机，API Key 存储在 macOS 钥匙串中；应用不包含任何遥测。",
+                    "All data stays on this Mac. API keys live in the macOS Keychain. No telemetry."
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -94,16 +142,19 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Menu {
                 ForEach(ProviderID.allCases) { provider in
-                    Button("添加 \(provider.displayName)") {
+                    Button(T("添加 \(provider.displayName)", "Add \(provider.displayName)")) {
                         store.addAccount(provider: provider, name: provider.displayName)
                     }
                 }
             } label: {
-                Label("添加 Provider", systemImage: "plus")
+                Label(T("添加 Provider", "Add provider"), systemImage: "plus")
             }
-            Text("DeepSeek / Kimi 显示 API 余额；GLM / Kimi Code 显示套餐余量。")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            Text(T(
+                "DeepSeek / Kimi 显示 API 余额；GLM / Kimi Code 显示套餐余量。",
+                "DeepSeek / Kimi show API balance; GLM / Kimi Code show plan quotas."
+            ))
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -135,6 +186,13 @@ struct SettingsView: View {
         )
     }
 
+    private var resetAlertBinding: Binding<Bool> {
+        Binding(
+            get: { store.resetAlertsEnabled },
+            set: { store.setResetAlertsEnabled($0) }
+        )
+    }
+
     private var usageBinding: Binding<Bool> {
         Binding(
             get: { UsageStore.shared.enabled },
@@ -162,17 +220,58 @@ struct SettingsView: View {
             set: { store.setLaunchAtLogin($0) }
         )
     }
+
+    private var languageBinding: Binding<AppLanguage> {
+        Binding(
+            get: { Prefs.language },
+            set: { Prefs.language = $0 }
+        )
+    }
+
+    private func relaunch() {
+        let url = Bundle.main.bundleURL
+        guard url.pathExtension == "app" else { return }
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = [url.path]
+        try? task.run()
+        NSApp.terminate(nil)
+    }
+}
+
+/// 拖拽排序：把 Provider 拖到另一行上时即时重排。
+struct ProviderDropDelegate: DropDelegate {
+    let target: ProviderAccount
+    let store: AppStore
+    @Binding var draggingID: UUID?
+
+    func validateDrop(info: DropInfo) -> Bool {
+        guard let draggingID else { return false }
+        return draggingID != target.id
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let draggingID, draggingID != target.id else { return }
+        store.moveAccount(id: draggingID, before: target.id)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingID = nil
+        return true
+    }
 }
 
 /// 单个 Provider 的编辑行：名称、密钥、站点、间隔、状态、排序与删除。
 struct ProviderRowView: View {
     let account: ProviderAccount
+    @Binding var draggingID: UUID?
     @Environment(AppStore.self) private var store
     @State private var keyInput: String
     @State private var hasStoredKey: Bool
 
-    init(account: ProviderAccount) {
+    init(account: ProviderAccount, draggingID: Binding<UUID?>) {
         self.account = account
+        _draggingID = draggingID
         let stored = AppStore.shared.apiKey(for: account.id)?.isEmpty == false
         _hasStoredKey = State(initialValue: stored)
         _keyInput = State(initialValue: "")
@@ -181,10 +280,19 @@ struct ProviderRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .onDrag {
+                        draggingID = account.id
+                        return NSItemProvider(object: account.id.uuidString as NSString)
+                    }
+                    .help(T("拖动排序", "Drag to reorder"))
+
                 Circle()
                     .fill(account.provider.brandColor)
                     .frame(width: 8, height: 8)
-                TextField("名称", text: nameBinding)
+                TextField(T("名称", "Name"), text: nameBinding)
                     .textFieldStyle(.plain)
                     .font(.body.weight(.medium))
                     .labelsHidden()
@@ -193,7 +301,7 @@ struct ProviderRowView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Toggle("启用", isOn: enabledBinding)
+                Toggle(T("启用", "Enabled"), isOn: enabledBinding)
                     .toggleStyle(.switch)
                     .controlSize(.mini)
                     .labelsHidden()
@@ -214,7 +322,7 @@ struct ProviderRowView: View {
                                 .allowsHitTesting(false)
                         }
                     }
-                Button(hasStoredKey ? "替换" : "保存并测试") {
+                Button(hasStoredKey ? T("替换", "Replace") : T("保存并测试", "Save & test")) {
                     guard !keyInput.isEmpty else { return }
                     store.setAPIKey(id: account.id, key: keyInput)
                     hasStoredKey = true
@@ -227,7 +335,7 @@ struct ProviderRowView: View {
 
             if supportsRegionPicker {
                 HStack(spacing: 8) {
-                    Picker("站点", selection: regionBinding) {
+                    Picker(T("站点", "Region"), selection: regionBinding) {
                         ForEach(regionOptions, id: \.self) { option in
                             Text(option.label).tag(option.url)
                         }
@@ -248,11 +356,11 @@ struct ProviderRowView: View {
             }
 
             HStack(spacing: 8) {
-                Picker("刷新", selection: intervalBinding) {
-                    Text("1 分钟").tag(60)
-                    Text("5 分钟").tag(300)
-                    Text("10 分钟").tag(600)
-                    Text("30 分钟").tag(1800)
+                Picker(T("刷新", "Refresh"), selection: intervalBinding) {
+                    Text(T("1 分钟", "1 min")).tag(60)
+                    Text(T("5 分钟", "5 min")).tag(300)
+                    Text(T("10 分钟", "10 min")).tag(600)
+                    Text(T("30 分钟", "30 min")).tag(1800)
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()
@@ -264,16 +372,17 @@ struct ProviderRowView: View {
             }
         }
         .padding(.vertical, 2)
+        .opacity(draggingID == account.id ? 0.5 : 1)
     }
 
     // MARK: - 组件
 
     private var rowMenu: some View {
         Menu {
-            Button("上移") { store.moveAccount(id: account.id, by: -1) }
-            Button("下移") { store.moveAccount(id: account.id, by: 1) }
+            Button(T("上移", "Move up")) { store.moveAccount(id: account.id, by: -1) }
+            Button(T("下移", "Move down")) { store.moveAccount(id: account.id, by: 1) }
             Divider()
-            Button("删除", role: .destructive) {
+            Button(T("删除", "Delete"), role: .destructive) {
                 store.removeAccount(id: account.id)
             }
         } label: {
@@ -299,7 +408,7 @@ struct ProviderRowView: View {
                 .font(.caption2)
                 .foregroundStyle(.green)
         } else {
-            Text("未验证")
+            Text(T("未验证", "Not verified"))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -308,11 +417,13 @@ struct ProviderRowView: View {
     // MARK: - 文案
 
     private var keyPlaceholder: String {
-        if hasStoredKey { return "已保存在钥匙串 · 输入新 Key 可替换" }
+        if hasStoredKey {
+            return T("已保存在钥匙串 · 输入新 Key 可替换", "Saved in Keychain · enter a new key to replace")
+        }
         switch account.provider {
-        case .glm: return "粘贴 GLM Coding Plan API Key"
-        case .kimiCode: return "粘贴 Kimi For Coding API Key（sk-…）"
-        default: return "粘贴 API Key"
+        case .glm: return T("粘贴 GLM Coding Plan API Key", "Paste GLM Coding Plan API key")
+        case .kimiCode: return T("粘贴 Kimi For Coding API Key（sk-…）", "Paste Kimi For Coding API key (sk-…)")
+        default: return T("粘贴 API Key", "Paste API key")
         }
     }
 
@@ -329,13 +440,25 @@ struct ProviderRowView: View {
         switch account.provider {
         case .moonshot:
             return [
-                RegionOption(label: "国内 · moonshot.cn", url: URL(string: "https://api.moonshot.cn")!),
-                RegionOption(label: "国际 · moonshot.ai", url: URL(string: "https://api.moonshot.ai")!)
+                RegionOption(
+                    label: T("国内 · moonshot.cn", "China · moonshot.cn"),
+                    url: URL(string: "https://api.moonshot.cn")!
+                ),
+                RegionOption(
+                    label: T("国际 · moonshot.ai", "Global · moonshot.ai"),
+                    url: URL(string: "https://api.moonshot.ai")!
+                )
             ]
         case .glm:
             return [
-                RegionOption(label: "智谱 · bigmodel.cn", url: URL(string: "https://open.bigmodel.cn")!),
-                RegionOption(label: "国际 · z.ai", url: URL(string: "https://api.z.ai")!)
+                RegionOption(
+                    label: T("智谱 · bigmodel.cn", "Zhipu · bigmodel.cn"),
+                    url: URL(string: "https://open.bigmodel.cn")!
+                ),
+                RegionOption(
+                    label: T("国际 · z.ai", "Global · z.ai"),
+                    url: URL(string: "https://api.z.ai")!
+                )
             ]
         default:
             return []
@@ -344,10 +467,26 @@ struct ProviderRowView: View {
 
     private var regionHint: String {
         switch account.provider {
-        case .moonshot: return "API Key 与站点必须匹配，混用会返回 401。"
-        case .glm: return "Coding Plan Key 与站点必须匹配；额度接口为只读。"
-        case .kimiCode: return "在 platform.kimi.com 的 Kimi For Coding 页面获取 Key。"
-        default: return "密钥只保存在 macOS 钥匙串，不会写入配置文件。"
+        case .moonshot:
+            return T(
+                "API Key 与站点必须匹配，混用会返回 401。",
+                "The API key must match the region; mixing them returns 401."
+            )
+        case .glm:
+            return T(
+                "Coding Plan Key 与站点必须匹配；额度接口为只读。",
+                "The Coding Plan key must match the region; quota APIs are read-only."
+            )
+        case .kimiCode:
+            return T(
+                "在 platform.kimi.com 的 Kimi For Coding 页面获取 Key。",
+                "Get the key from Kimi For Coding on platform.kimi.com."
+            )
+        default:
+            return T(
+                "密钥只保存在 macOS 钥匙串，不会写入配置文件。",
+                "Keys are stored only in the macOS Keychain, never in config files."
+            )
         }
     }
 

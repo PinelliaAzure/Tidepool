@@ -20,6 +20,9 @@ struct PricingSchedule: Equatable {
 
     var discountLabel: String {
         let percentOff = Int(((1 - offPeakFraction) * 100).rounded())
+        if L10n.isEnglish {
+            return "\(percentOff)% off"
+        }
         if percentOff % 10 == 0 {
             return "\(percentOff / 10) 折"
         }
@@ -86,8 +89,14 @@ struct PricingStatus: Equatable {
 
     var currentDetail: String {
         isOffPeak
-            ? "当前闲时，价格为标准价的 \(schedule.discountLabel)"
-            : "当前标准价，\(TideFormatter.countdownShort(to: nextTransition)) 后进入闲时"
+            ? T(
+                "当前闲时，价格为标准价的 \(schedule.discountLabel)",
+                "Off-peak — \(schedule.discountLabel) the standard price"
+            )
+            : T(
+                "当前标准价，\(TideFormatter.countdownShort(to: nextTransition)) 后进入闲时",
+                "Standard price — off-peak starts in \(TideFormatter.countdownShort(to: nextTransition))"
+            )
     }
 }
 
@@ -103,8 +112,14 @@ enum ProviderPricing {
                     PricingWindow(startMinute: 14 * 60, endMinute: 18 * 60)
                 ],
                 offPeakFraction: 0.5,
-                peakDetail: "工作日 09:00–12:00 / 14:00–18:00 为标准价",
-                note: "闲时价格为标准价的 5 折；周末全天闲时，法定节假日以官方价格页为准。"
+                peakDetail: T(
+                    "工作日 09:00–12:00 / 14:00–18:00 为标准价",
+                    "Standard price on weekdays 09:00–12:00 and 14:00–18:00"
+                ),
+                note: T(
+                    "闲时价格为标准价的 5 折；周末全天闲时，法定节假日以官方价格页为准。",
+                    "Off-peak is 50% off; weekends are off-peak all day. Public holidays follow the official pricing page."
+                )
             )
         case .moonshot, .kimiCode, .glm:
             return nil
@@ -127,8 +142,12 @@ enum ProviderPricing {
 
         return PricingStatus(
             isOffPeak: !isPeak,
-            currentLabel: isPeak ? "标准价" : "闲时 \(schedule.discountLabel)",
-            nextLabel: nextIsPeak ? "标准价" : "闲时 \(schedule.discountLabel)",
+            currentLabel: isPeak
+                ? T("标准价", "Peak")
+                : T("闲时 \(schedule.discountLabel)", "Off-peak \(schedule.discountLabel)"),
+            nextLabel: nextIsPeak
+                ? T("标准价", "Peak")
+                : T("闲时 \(schedule.discountLabel)", "Off-peak \(schedule.discountLabel)"),
             nextTransition: next,
             schedule: schedule,
             now: now

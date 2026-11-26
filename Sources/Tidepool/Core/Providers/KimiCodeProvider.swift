@@ -51,7 +51,9 @@ struct KimiCodeProvider: BalanceProviding {
         }
 
         guard !quotas.isEmpty else {
-            throw ProviderError.notSupported("该 Key 没有可读取的 Kimi Code 套餐额度")
+            throw ProviderError.notSupported(
+                T("该 Key 没有可读取的 Kimi Code 套餐额度", "No Kimi Code quota found for this key")
+            )
         }
 
         return ProviderSnapshot(

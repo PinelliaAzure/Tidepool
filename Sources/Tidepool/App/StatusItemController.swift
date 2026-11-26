@@ -88,30 +88,30 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.delegate = self
         menu.autoenablesItems = false
 
-        let refresh = NSMenuItem(title: "立即刷新", action: #selector(refreshAll(_:)), keyEquivalent: "r")
+        let refresh = NSMenuItem(title: T("立即刷新", "Refresh now"), action: #selector(refreshAll(_:)), keyEquivalent: "r")
         refresh.target = self
         menu.addItem(refresh)
 
-        let usage = NSMenuItem(title: "本地用量…", action: #selector(openUsage(_:)), keyEquivalent: "u")
+        let usage = NSMenuItem(title: T("本地用量…", "Local usage…"), action: #selector(openUsage(_:)), keyEquivalent: "u")
         usage.target = self
         menu.addItem(usage)
 
-        let privacy = NSMenuItem(title: "隐私模式", action: #selector(togglePrivacy(_:)), keyEquivalent: "p")
+        let privacy = NSMenuItem(title: T("隐私模式", "Privacy mode"), action: #selector(togglePrivacy(_:)), keyEquivalent: "p")
         privacy.target = self
         privacy.state = store.privacyMode ? .on : .off
         menu.addItem(privacy)
 
-        let updates = NSMenuItem(title: "检查更新…", action: #selector(checkUpdates(_:)), keyEquivalent: "")
+        let updates = NSMenuItem(title: T("检查更新…", "Check for updates…"), action: #selector(checkUpdates(_:)), keyEquivalent: "")
         updates.target = self
         menu.addItem(updates)
 
-        let settings = NSMenuItem(title: "Tidepool 设置…", action: #selector(openSettings(_:)), keyEquivalent: ",")
+        let settings = NSMenuItem(title: T("Tidepool 设置…", "Tidepool Settings…"), action: #selector(openSettings(_:)), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "退出 Tidepool", action: #selector(quit(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: T("退出 Tidepool", "Quit Tidepool"), action: #selector(quit(_:)), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 

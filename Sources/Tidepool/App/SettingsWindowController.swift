@@ -15,7 +15,7 @@ final class SettingsWindowController {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "Tidepool 设置"
+            window.title = T("Tidepool 设置", "Tidepool Settings")
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView().environment(AppStore.shared))
             window.center()

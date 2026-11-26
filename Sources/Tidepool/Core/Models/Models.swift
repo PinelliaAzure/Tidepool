@@ -39,10 +39,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     /// 渠道类型说明（设置窗口用）。
     var kindDescription: String {
         switch self {
-        case .deepseek: return "开放平台 API 余额"
-        case .moonshot: return "开放平台 API 余额"
-        case .kimiCode: return "Kimi For Coding 套餐额度"
-        case .glm: return "GLM Coding Plan 额度"
+        case .deepseek: return T("开放平台 API 余额", "API balance")
+        case .moonshot: return T("开放平台 API 余额", "API balance")
+        case .kimiCode: return T("Kimi For Coding 套餐额度", "Kimi For Coding quota")
+        case .glm: return T("GLM Coding Plan 额度", "GLM Coding Plan quota")
         }
     }
 
@@ -140,9 +140,9 @@ enum QuotaKind: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .fiveHour: return "5 小时"
-        case .weekly: return "本周"
-        case .monthly: return "本月"
+        case .fiveHour: return T("5 小时", "5-hour")
+        case .weekly: return T("本周", "Weekly")
+        case .monthly: return T("本月", "Monthly")
         }
     }
 
@@ -202,9 +202,9 @@ enum MenuBarStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .single: return "当前 Provider"
-        case .all: return "全部（紧凑）"
-        case .tightest: return "最紧张的一项"
+        case .single: return T("当前 Provider", "Current provider")
+        case .all: return T("全部（紧凑）", "All (compact)")
+        case .tightest: return T("最紧张的一项", "Tightest quota")
         }
     }
 }

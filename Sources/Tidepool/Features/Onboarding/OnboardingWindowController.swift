@@ -18,7 +18,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "欢迎使用 Tidepool"
+            window.title = T("欢迎使用 Tidepool", "Welcome to Tidepool")
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false

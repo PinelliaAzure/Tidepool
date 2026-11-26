@@ -86,7 +86,7 @@ enum PreviewRunner {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "Tidepool · 本地用量"
+            window.title = T("Tidepool · 本地用量", "Tidepool · Local usage")
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(
                 rootView: UsageWindowView()

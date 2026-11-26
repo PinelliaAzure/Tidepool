@@ -1,9 +1,9 @@
 import Foundation
 import UserNotifications
 
-/// 低余额 / 低额度提醒：
-/// - 余额跌破阈值时提醒一次，回升到 1.2 倍阈值以上才重新武装
-/// - 每个额度窗口（按重置时间区分）只提醒一次
+/// 发送系统通知并对事件去重：
+/// - 余额跌破阈值提醒一次，回升到 1.2 倍阈值以上才重新武装
+/// - 每个额度窗口（按重置时间区分）的低额度 / 重置提醒各只发一次
 /// - 提醒记录持久化，重启不重复打扰
 @MainActor
 final class NotificationManager {
@@ -23,39 +23,36 @@ final class NotificationManager {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    func evaluate(account: ProviderAccount, snapshot: ProviderSnapshot, enabled: Bool) {
+    func evaluate(
+        account: ProviderAccount,
+        snapshot: ProviderSnapshot,
+        enabled: Bool,
+        includeReset: Bool
+    ) {
         guard enabled, Bundle.main.bundleIdentifier != nil else { return }
 
         var keys = fired
 
-        if let balance = snapshot.balance {
-            let key = "balance-\(account.id.uuidString)"
-            let belowThreshold = balance.isAvailable && balance.total <= AppStore.lowBalanceThreshold
-            if belowThreshold {
-                if !keys.contains(key) {
-                    keys.insert(key)
-                    post(
-                        title: "\(account.name) 余额偏低",
-                        body: "当前可用 \(TideFormatter.money(balance.total, currency: balance.currency, style: .hero))，记得及时充值。"
-                    )
-                }
-            } else if balance.total > AppStore.lowBalanceThreshold * 1.2 {
-                keys.remove(key)
-            }
+        // 余额恢复后重新武装低余额提醒
+        if let balance = snapshot.balance,
+           balance.total > AppStore.lowBalanceThreshold * 1.2 {
+            keys.remove("balance-\(account.id.uuidString)")
         }
 
-        for quota in snapshot.quotas where quota.remainingPercent <= 10 {
-            let cycle = quota.resetDate.map { String(Int($0.timeIntervalSince1970)) } ?? "static"
-            let key = "quota-\(account.id.uuidString)-\(quota.kind.rawValue)-\(cycle)"
-            guard !keys.contains(key) else { continue }
-            keys.insert(key)
-            let resetNote = quota.resetDate.map { "，\(TideFormatter.countdown(to: $0))" } ?? ""
-            post(
-                title: "\(account.name) 额度不足",
-                body: "\(quota.kind.displayName)额度剩余 \(TideFormatter.percent(quota.remainingPercent))\(resetNote)。"
-            )
+        let events = AlertPlanner.events(
+            account: account,
+            snapshot: snapshot,
+            includeReset: includeReset
+        )
+        for event in events where !keys.contains(event.key) {
+            keys.insert(event.key)
+            post(title: event.title, body: event.body)
         }
 
+        // 控制持久化体积
+        if keys.count > 300 {
+            keys = Set(Array(keys).suffix(200))
+        }
         fired = keys
     }
 
