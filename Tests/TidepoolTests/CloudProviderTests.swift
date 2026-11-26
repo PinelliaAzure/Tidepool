@@ -144,3 +144,19 @@ struct CloudCredentialTests {
         }
     }
 }
+
+@Suite("腾讯云签名")
+struct TencentSignatureTests {
+    @Test func tc3Vector() {
+        let signature = TencentCloudProvider.signature(
+            secretKey: "TEST_SECRET",
+            date: "2026-11-26",
+            service: "billing",
+            timestamp: 1_795_622_400,
+            payload: "{}",
+            host: "billing.tencentcloudapi.com",
+            action: "DescribeAccountBalance"
+        )
+        #expect(signature == "2697d5bd68e5251d115ab9c71d1843253de3b4746184fca87999a4433e2ee5f1")
+    }
+}

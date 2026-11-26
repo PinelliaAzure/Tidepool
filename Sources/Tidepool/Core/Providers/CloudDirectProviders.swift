@@ -43,16 +43,16 @@ struct TencentCloudProvider: BalanceProviding {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let date = dateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
 
-        let canonicalHeaders = "content-type:application/json; charset=utf-8\nhost:\(host)\n"
-        let signedHeaders = "content-type;host"
-        let hashedPayload = sha256Hex(payload)
-        let canonicalRequest = "POST\n/\n\n\(canonicalHeaders)\n\(signedHeaders)\n\(hashedPayload)"
-        let stringToSign = "TC3-HMAC-SHA256\n\(timestamp)\n\(date)/\(service)/tc3_request\n\(sha256Hex(canonicalRequest))"
-
-        let secretDate = hmac(key: "TC3\(credentials.secretKey)", data: date)
-        let secretService = hmac(key: secretDate, data: service)
-        let secretSigning = hmac(key: secretService, data: "tc3_request")
-        let signature = hmac(key: secretSigning, data: stringToSign)
+        let signedHeaders = "content-type;host;x-tc-action"
+        let signature = Self.signature(
+            secretKey: credentials.secretKey,
+            date: date,
+            service: service,
+            timestamp: timestamp,
+            payload: payload,
+            host: host,
+            action: action
+        )
 
         let authorization = "TC3-HMAC-SHA256 Credential=\(credentials.secretId)/\(date)/\(service)/tc3_request, "
             + "SignedHeaders=\(signedHeaders), Signature=\(signature)"
@@ -89,14 +89,40 @@ struct TencentCloudProvider: BalanceProviding {
         return try TencentCloudCLIProvider.parse(json)
     }
 
-    private func sha256Hex(_ string: String) -> String {
+    /// TC3 签名：中间派生密钥必须保持二进制，不能转成十六进制字符串。
+    static func signature(
+        secretKey: String,
+        date: String,
+        service: String,
+        timestamp: Int,
+        payload: String,
+        host: String,
+        action: String
+    ) -> String {
+        let canonicalHeaders = "content-type:application/json; charset=utf-8\n"
+            + "host:\(host)\n"
+            + "x-tc-action:\(action.lowercased())\n"
+        let signedHeaders = "content-type;host;x-tc-action"
+        let canonicalRequest = "POST\n/\n\n\(canonicalHeaders)\n\(signedHeaders)\n\(sha256Hex(payload))"
+        let stringToSign = "TC3-HMAC-SHA256\n\(timestamp)\n\(date)/\(service)/tc3_request\n\(sha256Hex(canonicalRequest))"
+
+        let secretDate = hmacData(key: Data(("TC3" + secretKey).utf8), data: date)
+        let secretService = hmacData(key: secretDate, data: service)
+        let secretSigning = hmacData(key: secretService, data: "tc3_request")
+        return hex(hmacData(key: secretSigning, data: stringToSign))
+    }
+
+    private static func sha256Hex(_ string: String) -> String {
         SHA256.hash(data: Data(string.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func hmac(key: String, data: String) -> String {
-        let symmetricKey = SymmetricKey(data: Data(key.utf8))
-        let code = HMAC<SHA256>.authenticationCode(for: Data(data.utf8), using: symmetricKey)
-        return code.map { String(format: "%02x", $0) }.joined()
+    private static func hmacData(key: Data, data: String) -> Data {
+        let code = HMAC<SHA256>.authenticationCode(for: Data(data.utf8), using: SymmetricKey(data: key))
+        return Data(code)
+    }
+
+    private static func hex(_ data: Data) -> String {
+        data.map { String(format: "%02x", $0) }.joined()
     }
 }
 
