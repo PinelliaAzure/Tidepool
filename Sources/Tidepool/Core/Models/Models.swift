@@ -10,6 +10,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     case glm
     case openrouter
     case siliconFlow
+    case volcengine
+    case alibaba
+    case tencent
+    case huawei
     case custom
 
     var id: String { rawValue }
@@ -22,6 +26,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return "GLM"
         case .openrouter: return "OpenRouter"
         case .siliconFlow: return "SiliconFlow"
+        case .volcengine: return T("火山方舟", "Volcengine Ark")
+        case .alibaba: return T("阿里云百炼", "Alibaba Model Studio")
+        case .tencent: return T("腾讯云", "Tencent Cloud")
+        case .huawei: return T("华为云", "Huawei Cloud")
         case .custom: return T("自定义", "Custom")
         }
     }
@@ -35,6 +43,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return 0x14B8A6
         case .openrouter: return 0x6C5CE7
         case .siliconFlow: return 0x5B5CF5
+        case .volcengine: return 0x1664FF
+        case .alibaba: return 0xFF6A00
+        case .tencent: return 0x006EFF
+        case .huawei: return 0xCF0A2C
         case .custom: return 0x8E8E93
         }
     }
@@ -54,6 +66,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return T("GLM Coding Plan 额度", "GLM Coding Plan quota")
         case .openrouter: return T("API 余额（USD）", "API credits (USD)")
         case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
+        case .volcengine: return T("Coding Plan 额度（arkcli）", "Coding Plan quota (arkcli)")
+        case .alibaba: return T("Coding Plan 额度（bl）", "Coding Plan quota (bl)")
+        case .tencent: return T("账户余额（tccli）", "Account balance (tccli)")
+        case .huawei: return T("账户余额（hcloud）", "Account balance (hcloud)")
         case .custom: return T("只读 JSON 接口", "Read-only JSON API")
         }
     }
@@ -62,7 +78,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     var isQuotaProvider: Bool {
         switch self {
         case .kimiCode, .glm: return true
-        case .deepseek, .moonshot, .openrouter, .siliconFlow, .custom: return false
+        case .deepseek, .moonshot, .openrouter, .siliconFlow, .volcengine, .alibaba, .tencent, .huawei, .custom:
+            return false
         }
     }
 
@@ -74,6 +91,10 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .openrouter: return URL(string: "https://openrouter.ai/settings/keys")!
         case .siliconFlow: return URL(string: "https://cloud.siliconflow.cn/account/ak")!
+        case .volcengine: return URL(string: "https://console.volcengine.com/ark")!
+        case .alibaba: return URL(string: "https://bailian.console.aliyun.com")!
+        case .tencent: return URL(string: "https://console.cloud.tencent.com/billing")!
+        case .huawei: return URL(string: "https://console.huaweicloud.com/billing")!
         case .custom: return URL(string: "https://github.com/PinelliaAzure/Tidepool")!
         }
     }
@@ -86,13 +107,25 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .glm: return URL(string: "https://open.bigmodel.cn")!
         case .openrouter: return URL(string: "https://openrouter.ai")!
         case .siliconFlow: return URL(string: "https://api.siliconflow.cn")!
+        case .volcengine: return URL(string: "https://ark.cn-beijing.volces.com")!
+        case .alibaba: return URL(string: "https://dashscope.aliyuncs.com")!
+        case .tencent: return URL(string: "https://billing.tencentcloudapi.com")!
+        case .huawei: return URL(string: "https://bss.myhuaweicloud.com")!
         case .custom: return URL(string: "https://example.com")!
         }
     }
 
-    /// 首次引导里只展示内置渠道，自定义渠道放到设置里配置。
+    /// 首次引导只展示无需额外 CLI 的渠道。
     static var onboardingCases: [ProviderID] {
-        allCases.filter { $0 != .custom }
+        allCases.filter { !$0.usesCLI && $0 != .custom }
+    }
+
+    /// 依赖本机官方 CLI（登录后读取额度/余额），不保存 API Key。
+    var usesCLI: Bool {
+        switch self {
+        case .volcengine, .alibaba, .tencent, .huawei: return true
+        default: return false
+        }
     }
 }
 

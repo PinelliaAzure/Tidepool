@@ -371,7 +371,8 @@ final class AppStore {
         guard let account = accounts.first(where: { $0.id == id }), account.enabled else { return false }
         guard force || states[id]?.isRefreshing != true else { return false }
         let storedKey = keychain.get(id) ?? ""
-        let allowsEmptyKey = account.provider == .custom && account.custom?.authStyle == .none
+        let allowsEmptyKey = account.provider.usesCLI
+            || (account.provider == .custom && account.custom?.authStyle == .none)
         guard allowsEmptyKey || !storedKey.isEmpty else {
             states[id]?.lastError = T("未配置 API Key", "API key not configured")
             notify()

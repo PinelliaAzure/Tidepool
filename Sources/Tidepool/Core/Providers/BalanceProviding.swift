@@ -89,6 +89,10 @@ enum ProviderRegistry {
         case .glm: return GLMProvider()
         case .openrouter: return OpenRouterProvider()
         case .siliconFlow: return SiliconFlowProvider()
+        case .volcengine: return VolcengineCLIProvider()
+        case .alibaba: return AlibabaCLIProvider()
+        case .tencent: return TencentCloudCLIProvider()
+        case .huawei: return HuaweiCloudCLIProvider()
         case .custom: return UnsupportedProvider(provider: .custom)
         }
     }

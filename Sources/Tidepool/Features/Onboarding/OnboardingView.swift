@@ -444,6 +444,14 @@ struct OnboardingView: View {
             )
         case .custom:
             return T("自定义渠道在设置里配置。", "Configure custom providers in Settings.")
+        case .volcengine:
+            return T("在设置里添加后，安装并登录 arkcli。", "Add it in Settings, then install and sign in to arkcli.")
+        case .alibaba:
+            return T("在设置里添加后，安装并登录阿里云百炼 CLI（bl）。", "Add it in Settings, then install and sign in to the Bailian CLI (bl).")
+        case .tencent:
+            return T("在设置里添加后，安装并配置腾讯云 CLI（tccli）。", "Add it in Settings, then install and configure tccli.")
+        case .huawei:
+            return T("在设置里添加后，安装并配置华为云 KooCLI（hcloud）。", "Add it in Settings, then install and configure Huawei Cloud KooCLI (hcloud).")
         }
     }
 

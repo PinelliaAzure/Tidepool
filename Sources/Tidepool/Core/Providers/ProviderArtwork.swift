@@ -46,6 +46,22 @@ enum ProviderArtwork {
 </svg>
 """#
 
+    static let volcengine: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h4.6l4.4 13.2L16.4 3H21l-7.1 18H10L3 3z"/></svg>
+"""#
+
+    static let alibaba: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2 3 22h4.6l1.5-4h5.8l1.5 4H21L12 2zm0 7.2 2 5.3h-4l2-5.3z"/></svg>
+"""#
+
+    static let tencent: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v4.2H13.9V21h-4V8.2H3V4z"/></svg>
+"""#
+
+    static let huawei: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h4.2v7.1h9.6V3H21v18h-4.2v-7.2H7.2V21H3V3z"/></svg>
+"""#
+
     static let custom: String = #"""
 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.9 2h2.2v6.2l4.4-4.4 1.6 1.6-4.4 4.4H21v2.2h-6.3l4.4 4.4-1.6 1.6-4.4-4.4V21h-2.2v-6.3l-4.4 4.4-1.6-1.6 4.4-4.4H3v-2.2h6.3L4.9 5.4l1.6-1.6 4.4 4.4V2z"/></svg>
 """#
@@ -58,6 +74,10 @@ enum ProviderArtwork {
         case .glm: return glm
         case .openrouter: return openrouter
         case .siliconFlow: return siliconflow
+        case .volcengine: return volcengine
+        case .alibaba: return alibaba
+        case .tencent: return tencent
+        case .huawei: return huawei
         case .custom: return custom
         }
     }

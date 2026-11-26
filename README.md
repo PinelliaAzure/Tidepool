@@ -11,7 +11,7 @@ macOS 菜单栏里的多平台 AI 余额与余量仪表盘：品牌图标旁边�
   <img src="docs/preview-quota.png" width="360" alt="额度视图">
 </p>
 
-- **多平台**：DeepSeek / Kimi / Kimi Code / GLM / OpenRouter / SiliconFlow；还能用「自定义」接入任意只读 JSON 接口
+- **多平台**：DeepSeek / Kimi / Kimi Code / GLM / OpenRouter / SiliconFlow / 火山方舟 / 阿里云百炼 / 腾讯云 / 华为云；还能用「自定义」接入任意只读 JSON 接口
 - **余额与额度**：API 余额、Coding Plan 5 小时 / 周额度、自定义百分比
 - **实时计价**：DeepSeek 工作日高峰为标准价、其余时段 5 折；金额下方橙 / 青状态线 + 24h 时段条
 - **额度节奏**：用「时间进度 vs 用量进度」判断会不会提前用完，而不只给一个百分比
@@ -51,6 +51,18 @@ DeepSeek 官方规则（2026-11）：
 菜单栏用金额下方的 2px 状态线表示（不是角标）：橙色 = 标准价，青色 = 闲时；tooltip 显示下次切换时间。
 架构上 `ProviderPricing.schedule(for:)` 支持给其他 Provider 增加时段规则；目前只有 DeepSeek 有官方闲时定价。
 
+### 云厂商（官方 CLI）
+这几家没有简单的 Bearer 余额接口，Tidepool 通过官方 CLI 读取，不保存 AK/SK：
+
+| Provider | 读取内容 | 前置条件 |
+|---|---|---|
+| 火山方舟 | Coding Plan 5h / 周 / 月额度 | `npm install -g @volcengine/ark-cli` → `arkcli auth login volc-sso` |
+| 阿里云百炼 | Coding Plan 5h / 周 / 月额度 | 安装 `bl` → `bl auth login --console` |
+| 腾讯云 | 账户可用余额（分转元） | `pip install tccli` → `tccli configure` |
+| 华为云 | 账户余额 / 奖励金 | 安装 KooCLI → `hcloud configure init` |
+
+在设置里添加对应 Provider 后点「检测」即可；CLI 未安装或未登录时会显示明确提示。
+
 ### 自定义接入
 设置 → 添加 Provider → 自定义：
 
@@ -72,7 +84,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.2.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.3.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -87,7 +99,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 54 个单元测试（Swift Testing）
+make test         # 60 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -118,6 +130,10 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | GLM / Z.ai | Coding Plan 5h / 周 / MCP 月度额度 | `GET https://open.bigmodel.cn/api/monitor/usage/quota/limit`（国际 `api.z.ai`） | ⚠️ 非公开只读接口 |
 | OpenRouter | API credits（USD） | `GET https://openrouter.ai/api/v1/credits` | ✅ 官方接口 |
 | SiliconFlow | 账户余额（CNY） | `GET https://api.siliconflow.cn/v1/user/info` | ✅ 官方接口 |
+| 火山方舟 | Coding Plan 5h / 周 / 月 | 本机 `arkcli`（登录后） | ✅ 官方 CLI |
+| 阿里云百炼 | Coding Plan 5h / 周 / 月 | 本机 `bl`（登录后） | ✅ 官方 CLI |
+| 腾讯云 | 账户余额（CNY） | 本机 `tccli` + `billing.DescribeAccountBalance` | ✅ 官方 CLI |
+| 华为云 | 账户余额（CNY） | 本机 `hcloud` + `BSS.ShowCustomerAccountBalances` | ✅ 官方 CLI |
 | 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |
 
 所有接口均为只读，不消耗额度；不做网页登录 / session 抓取。
@@ -151,7 +167,7 @@ Sources/Tidepool/
 - **M0 ✅** 菜单栏 + 玻璃面板 + DeepSeek / Kimi 余额 + 潮汐图 + runway
 - **M1 ✅** GLM / Kimi Code 额度 + 双环 + 节奏 + 通知 + 菜单栏多模式 + Provider 排序
 - **M2 ✅** 自定义 JSON 接入、OpenRouter / SiliconFlow、Onboarding + 本地用量（OpenCode / Claude Code / Codex）+ CSV + 额度历史 + 隐私模式 + DeepSeek 闲时计价
-- **M3（本地）✅** 拖拽排序、重置前提醒、中英双语、T 字标应用图标、Provider 品牌图标、检查更新入口
+- **M3（本地）✅** 火山 / 阿里 / 腾讯 / 华为（官方 CLI） 拖拽排序、重置前提醒、中英双语、T 字标应用图标、Provider 品牌图标、检查更新入口
 - **M3 ⏳（需要账号/仓库）** Developer ID 签名 + 公证、Sparkle appcast、Homebrew Cask
   - 先改 `Sources/Tidepool/Core/Updates/UpdateChecker.swift` 里的仓库地址
   - 证书与 notarytool 凭据就绪后，在 `build-app.sh` 基础上补签名 / 公证步骤

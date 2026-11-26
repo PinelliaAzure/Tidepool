@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.2"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.3"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -308,30 +308,46 @@ struct ProviderRowView: View {
                 rowMenu
             }
 
-            HStack(spacing: 8) {
-                SecureField("", text: $keyInput)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
-                    .labelsHidden()
-                    .overlay(alignment: .leading) {
-                        if keyInput.isEmpty {
-                            Text(keyPlaceholder)
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundStyle(.tertiary)
-                                .padding(.horizontal, 6)
-                                .allowsHitTesting(false)
-                        }
+            if account.provider.usesCLI {
+                HStack(spacing: 8) {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(cliHint)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(T("检测", "Check")) {
+                        Task { await store.refresh(account.id, force: true) }
                     }
-                Button(hasStoredKey ? T("替换", "Replace") : T("保存并测试", "Save & test")) {
-                    if !keyInput.isEmpty {
-                        store.setAPIKey(id: account.id, key: keyInput)
-                        hasStoredKey = true
-                        keyInput = ""
-                    }
-                    Task { await store.refresh(account.id, force: true) }
+                    .controlSize(.small)
                 }
-                .disabled(keyInput.isEmpty && !allowsEmptyKey)
-                .controlSize(.small)
+            } else {
+                HStack(spacing: 8) {
+                    SecureField("", text: $keyInput)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                        .labelsHidden()
+                        .overlay(alignment: .leading) {
+                            if keyInput.isEmpty {
+                                Text(keyPlaceholder)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 6)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    Button(hasStoredKey ? T("替换", "Replace") : T("保存并测试", "Save & test")) {
+                        if !keyInput.isEmpty {
+                            store.setAPIKey(id: account.id, key: keyInput)
+                            hasStoredKey = true
+                            keyInput = ""
+                        }
+                        Task { await store.refresh(account.id, force: true) }
+                    }
+                    .disabled(keyInput.isEmpty && !allowsEmptyKey)
+                    .controlSize(.small)
+                }
             }
 
             if supportsRegionPicker {
@@ -407,7 +423,8 @@ struct ProviderRowView: View {
             Text(error)
                 .font(.caption2)
                 .foregroundStyle(.red)
-                .lineLimit(1)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         } else if let updated = state?.lastSuccess {
             Text("✓ \(TideFormatter.relative(updated) ?? "")")
                 .font(.caption2)
@@ -499,7 +516,18 @@ struct ProviderRowView: View {
     // MARK: - 自定义接口
 
     private var allowsEmptyKey: Bool {
-        account.provider == .custom && (account.custom?.authStyle ?? .bearer) == .none
+        account.provider.usesCLI
+            || (account.provider == .custom && (account.custom?.authStyle ?? .bearer) == .none)
+    }
+
+    private var cliHint: String {
+        switch account.provider {
+        case .volcengine: return T("需要安装并登录 arkcli", "Install and sign in to arkcli")
+        case .alibaba: return T("需要安装并登录 bl", "Install and sign in to bl")
+        case .tencent: return T("需要安装并配置 tccli", "Install and configure tccli")
+        case .huawei: return T("需要安装并配置 hcloud", "Install and configure hcloud")
+        default: return ""
+        }
     }
 
     private var customConfig: CustomEndpointConfig {
