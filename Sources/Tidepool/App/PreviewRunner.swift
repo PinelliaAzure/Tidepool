@@ -10,6 +10,9 @@ enum PreviewRunner {
     static func run() {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
+        if ProcessInfo.processInfo.arguments.contains("--preview-dark") {
+            app.appearance = NSAppearance(named: .darkAqua)
+        }
 
         let store = AppStore.shared
         store.seedPreviewData()

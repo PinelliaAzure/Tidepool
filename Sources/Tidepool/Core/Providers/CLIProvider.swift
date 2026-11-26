@@ -220,7 +220,12 @@ struct AlibabaCLIProvider: BalanceProviding {
 
     static func parse(_ json: Any) throws -> ProviderSnapshot {
         guard let root = json as? [String: Any], !root.isEmpty else {
-            throw ProviderError.notSupported(T("已登录，但没有 Coding Plan 订阅", "Signed in, but no Coding Plan subscription"))
+            throw ProviderError.notSupported(
+                T(
+                    "已登录，但该账号没有 Coding Plan 订阅；可在设置里填 AccessKey 读账户余额。",
+                    "Signed in, but this account has no Coding Plan; enter an AccessKey in Settings to read the account balance."
+                )
+            )
         }
 
         func window(_ key: String, _ kind: QuotaKind) -> QuotaWindow? {

@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.6"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.7"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -331,6 +331,9 @@ struct ProviderRowView: View {
                     }
                     .controlSize(.small)
                 }
+                if account.provider == .alibaba {
+                    cloudKeyRow
+                }
             } else if account.provider.requiresCloudKeys {
                 cloudKeyRow
             } else {
@@ -536,6 +539,12 @@ struct ProviderRowView: View {
                 }
                 .disabled(secretIdInput.isEmpty || secretKeyInput.isEmpty)
                 .controlSize(.small)
+                if account.provider == .alibaba && hasStoredKey {
+                    Button(T("改用 CLI", "Use CLI")) {
+                        clearCloudCredentials()
+                    }
+                    .controlSize(.small)
+                }
             }
             Text(cloudKeyHint)
                 .font(.caption2)
@@ -557,6 +566,14 @@ struct ProviderRowView: View {
                         .allowsHitTesting(false)
                 }
             }
+    }
+
+    private func clearCloudCredentials() {
+        store.setAPIKey(id: account.id, key: "")
+        secretIdInput = ""
+        secretKeyInput = ""
+        hasStoredKey = false
+        Task { await store.refresh(account.id, force: true) }
     }
 
     private func saveCloudCredentials() {
@@ -581,6 +598,11 @@ struct ProviderRowView: View {
             return T(
                 "华为云控制台 → 我的凭证 → 访问密钥；需要 BSS 只读权限。密钥只保存在钥匙串。",
                 "Huawei Cloud Console → My Credentials → Access Keys; BSS read-only permission is enough. Keys stay in the Keychain."
+            )
+        case .alibaba:
+            return T(
+                "可选：填阿里云 AccessKey ID / Secret 读取账户余额（BSS）。留空则用 bl 读 Coding Plan；密钥只保存在钥匙串。",
+                "Optional: enter an Alibaba Cloud AccessKey ID/Secret to read account balance (BSS). Leave blank to use bl for Coding Plan. Keys stay in the Keychain."
             )
         default:
             return ""

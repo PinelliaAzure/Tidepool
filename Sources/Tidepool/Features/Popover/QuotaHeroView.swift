@@ -104,7 +104,7 @@ struct QuotaHeroView: View {
             if let reset = quota.resetDate {
                 Text(TideFormatter.countdown(to: reset))
                     .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .tertiaryText()
                     .multilineTextAlignment(.center)
                     .lineLimit(1)
             }
@@ -144,7 +144,7 @@ struct QuotaHeroView: View {
                 if let reset = quota.resetDate {
                     Text(TideFormatter.countdown(to: reset))
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .tertiaryText()
                 }
             }
             GeometryReader { proxy in
@@ -168,7 +168,7 @@ struct QuotaHeroView: View {
                 Spacer()
                 Text(T("近 7 天", "Last 7 days"))
                     .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                    .tertiaryText()
             }
 
             Chart(points) { point in
@@ -201,7 +201,7 @@ struct QuotaHeroView: View {
                         if let percent = value.as(Double.self) {
                             Text("\(Int(percent))%")
                                 .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .tertiaryText()
                         }
                     }
                 }

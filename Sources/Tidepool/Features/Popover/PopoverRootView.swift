@@ -12,8 +12,12 @@ struct PopoverRootView: View {
                 mainContent
             }
         }
-        .frame(width: 360)
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
+        .background {
+            PopoverBackdrop(accent: store.selectedAccount?.provider.brandColor ?? .accentColor)
+                .ignoresSafeArea()
+        }
     }
 
     @ViewBuilder

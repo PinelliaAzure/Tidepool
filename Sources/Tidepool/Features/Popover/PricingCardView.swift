@@ -38,12 +38,12 @@ struct PricingCardView: View {
                             : T("\(TideFormatter.countdownShort(to: status.nextTransition))后进入闲时", "Off-peak in \(TideFormatter.countdownShort(to: status.nextTransition))")
                     )
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .tertiaryText()
                 }
 
                 Text(status.schedule.note)
                     .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                    .tertiaryText()
                     .fixedSize(horizontal: false, vertical: true)
             }
             .glassCard()
@@ -90,7 +90,7 @@ struct PricingCardView: View {
                 Text("24:00")
             }
             .font(.system(size: 8))
-            .foregroundStyle(.tertiary)
+            .tertiaryText()
             .offset(y: 11)
         }
         .padding(.bottom, 10)

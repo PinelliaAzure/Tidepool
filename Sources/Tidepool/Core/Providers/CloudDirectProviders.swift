@@ -43,15 +43,14 @@ struct TencentCloudProvider: BalanceProviding {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let date = dateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
 
-        let signedHeaders = "content-type;host;x-tc-action"
+        let signedHeaders = "content-type;host"
         let signature = Self.signature(
             secretKey: credentials.secretKey,
             date: date,
             service: service,
             timestamp: timestamp,
             payload: payload,
-            host: host,
-            action: action
+            host: host
         )
 
         let authorization = "TC3-HMAC-SHA256 Credential=\(credentials.secretId)/\(date)/\(service)/tc3_request, "
@@ -96,13 +95,12 @@ struct TencentCloudProvider: BalanceProviding {
         service: String,
         timestamp: Int,
         payload: String,
-        host: String,
-        action: String
+        host: String
     ) -> String {
+        // 与腾讯云官方 SDK 完全一致：只签 content-type 和 host。
         let canonicalHeaders = "content-type:application/json; charset=utf-8\n"
             + "host:\(host)\n"
-            + "x-tc-action:\(action.lowercased())\n"
-        let signedHeaders = "content-type;host;x-tc-action"
+        let signedHeaders = "content-type;host"
         let canonicalRequest = "POST\n/\n\n\(canonicalHeaders)\n\(signedHeaders)\n\(sha256Hex(payload))"
         let stringToSign = "TC3-HMAC-SHA256\n\(timestamp)\n\(date)/\(service)/tc3_request\n\(sha256Hex(canonicalRequest))"
 
@@ -142,14 +140,15 @@ struct HuaweiCloudProvider: BalanceProviding {
         let path = "/v2/accounts/customer-accounts/balances"
         let timestamp = huaweiDate()
 
-        let canonicalHeaders = "content-type:application/json\nhost:\(host)\nx-sdk-date:\(timestamp)\n"
-        let signedHeaders = "content-type;host;x-sdk-date"
-        let canonicalRequest = "GET\n\(path)\n\n\(canonicalHeaders)\n\(signedHeaders)\n\(sha256Hex(""))"
-        let stringToSign = "SDK-HMAC-SHA256\n\(timestamp)\n\(sha256Hex(canonicalRequest))"
-        let signature = hmac(key: credentials.secretKey, data: stringToSign)
+        let signature = Self.signature(
+            secretKey: credentials.secretKey,
+            path: path,
+            host: host,
+            timestamp: timestamp
+        )
 
         let authorization = "SDK-HMAC-SHA256 Access=\(credentials.secretId), "
-            + "SignedHeaders=\(signedHeaders), Signature=\(signature)"
+            + "SignedHeaders=content-type;host;x-sdk-date, Signature=\(signature)"
 
         var request = URLRequest(url: URL(string: "https://\(host)\(path)")!, timeoutInterval: 20)
         request.httpMethod = "GET"
@@ -173,6 +172,26 @@ struct HuaweiCloudProvider: BalanceProviding {
         return try HuaweiCloudCLIProvider.parse(json)
     }
 
+    /// 华为云 SDK-HMAC-SHA256。官方 SDK 的 CanonicalURI 会补结尾 `/`，
+    /// 但实际请求 URL 不带这个斜杠，两者不能混用。
+    static func signature(
+        secretKey: String,
+        path: String,
+        host: String,
+        timestamp: String,
+        contentType: String = "application/json"
+    ) -> String {
+        let canonicalPath = path.hasSuffix("/") ? path : path + "/"
+        let signedHeaders = "content-type;host;x-sdk-date"
+        let canonicalHeaders = "content-type:\(contentType)\n"
+            + "host:\(host)\n"
+            + "x-sdk-date:\(timestamp)\n"
+        let canonicalRequest = "GET\n\(canonicalPath)\n\n\(canonicalHeaders)\n\(signedHeaders)\n"
+            + sha256Hex("")
+        let stringToSign = "SDK-HMAC-SHA256\n\(timestamp)\n\(sha256Hex(canonicalRequest))"
+        return hmacHex(key: secretKey, data: stringToSign)
+    }
+
     private func huaweiDate() -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -181,13 +200,127 @@ struct HuaweiCloudProvider: BalanceProviding {
         return formatter.string(from: Date())
     }
 
-    private func sha256Hex(_ string: String) -> String {
+    private static func sha256Hex(_ string: String) -> String {
         SHA256.hash(data: Data(string.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func hmac(key: String, data: String) -> String {
+    private static func hmacHex(key: String, data: String) -> String {
         let symmetricKey = SymmetricKey(data: Data(key.utf8))
         let code = HMAC<SHA256>.authenticationCode(for: Data(data.utf8), using: symmetricKey)
         return code.map { String(format: "%02x", $0) }.joined()
     }
+}
+
+// MARK: - 阿里云账户余额（BSS + RPC 签名）
+
+struct AlibabaCloudProvider: BalanceProviding {
+    func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
+        guard let credentials = CloudCredentials.decode(apiKey),
+              !credentials.secretId.isEmpty,
+              !credentials.secretKey.isEmpty else {
+            throw ProviderError.notSupported(
+                T("请填写阿里云 AccessKey ID 和 AccessKey Secret", "Enter your Alibaba Cloud AccessKey ID and Secret")
+            )
+        }
+
+        let params: [(String, String)] = [
+            ("AccessKeyId", credentials.secretId),
+            ("Action", "QueryAccountBalance"),
+            ("Format", "JSON"),
+            ("SignatureMethod", "HMAC-SHA1"),
+            ("SignatureNonce", UUID().uuidString),
+            ("SignatureVersion", "1.0"),
+            ("Timestamp", timestamp()),
+            ("Version", "2017-12-14")
+        ]
+
+        let canonical = Self.canonicalQuery(params)
+        let signature = Self.signature(secretKey: credentials.secretKey, canonicalQuery: canonical)
+
+        let urlString = "https://business.aliyuncs.com/?\(canonical)&Signature=\(Self.percentEncode(signature))"
+        guard let url = URL(string: urlString) else {
+            throw ProviderError.network(T("无效的请求地址", "Invalid request URL"))
+        }
+
+        var request = URLRequest(url: url, timeoutInterval: 20)
+        request.httpMethod = "GET"
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw ProviderError.network(T("无效响应", "Invalid response"))
+        }
+        if http.statusCode == 401 || http.statusCode == 403 {
+            throw ProviderError.invalidKey
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw ProviderError.http(http.statusCode)
+        }
+        return try Self.parse(data)
+    }
+
+    static func parse(_ data: Data) throws -> ProviderSnapshot {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw ProviderError.network(T("响应不是 JSON", "Response is not JSON"))
+        }
+        if let success = root["Success"] as? Bool, success == false {
+            let message = (root["Message"] as? String) ?? (root["Code"] as? String) ?? T("读取失败", "Request failed")
+            throw ProviderError.notSupported(message)
+        }
+        guard let payload = root["Data"] as? [String: Any] else {
+            throw ProviderError.network(T("响应缺少 Data", "Response is missing Data"))
+        }
+
+        func number(_ key: String) -> Double? {
+            if let value = payload[key] as? NSNumber { return value.doubleValue }
+            if let text = payload[key] as? String { return Double(text) }
+            return nil
+        }
+
+        let total = number("AvailableAmount") ?? number("AvailableCashAmount") ?? 0
+        let cash = number("AvailableCashAmount")
+        let currency = (payload["Currency"] as? String) ?? "CNY"
+
+        return ProviderSnapshot(
+            fetchedAt: Date(),
+            balance: BalanceSnapshot(
+                currency: currency,
+                total: total,
+                granted: nil,
+                toppedUp: cash,
+                isAvailable: total > 0
+            ),
+            quotas: [],
+            planName: "Alibaba Cloud"
+        )
+    }
+
+    /// RPC 风格签名：参数按 key 排序后 RFC3986 编码，再对整串签名。
+    static func canonicalQuery(_ params: [(String, String)]) -> String {
+        params
+            .sorted { $0.0 < $1.0 }
+            .map { "\(percentEncode($0.0))=\(percentEncode($0.1))" }
+            .joined(separator: "&")
+    }
+
+    static func signature(secretKey: String, canonicalQuery: String) -> String {
+        let stringToSign = "GET&%2F&\(percentEncode(canonicalQuery))"
+        let key = "\(secretKey)&"
+        let symmetricKey = SymmetricKey(data: Data(key.utf8))
+        let code = HMAC<Insecure.SHA1>.authenticationCode(for: Data(stringToSign.utf8), using: symmetricKey)
+        return Data(code).base64EncodedString()
+    }
+
+    static func percentEncode(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
+    private func timestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        return formatter.string(from: Date())
+    }
+
 }

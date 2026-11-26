@@ -57,11 +57,11 @@ DeepSeek 官方规则（2026-11）：
 | Provider | 读取内容 | 凭据方式 |
 |---|---|---|
 | 火山方舟 | Coding Plan 5h / 周 / 月额度 | 本机 `arkcli`（设置里有「浏览器登录」按钮） |
-| 阿里云百炼 | Coding Plan 5h / 周 / 月额度 | 本机 `bl`（设置里有「浏览器登录」按钮） |
+| 阿里云百炼 | Coding Plan 额度，或账户余额 | 本机 `bl`（浏览器登录）；也可选填 AccessKey 读账户余额 |
 | 腾讯云 | 账户可用余额（分转元） | App 内填 SecretId / SecretKey（TC3 签名，存钥匙串） |
 | 华为云 | 账户余额 / 奖励金 | App 内填 Access Key / Secret Key（存钥匙串） |
 
-火山/阿里没有公开的 Coding Plan 额度 API，所以保留官方 CLI；点「浏览器登录」会打开官方 SSO。
+火山/阿里没有公开的 Coding Plan 额度 API，所以保留官方 CLI；点「浏览器登录」会打开官方 SSO。阿里云账号若没有 Coding Plan，`bl` 会返回 No active Coding Plan subscription，此时在设置里填 AccessKey（可选）即可改用 BSS 账户余额。
 腾讯/华为不再需要 CLI，Tidepool 直接签名请求账单 API。
 
 ### 自定义接入
@@ -85,7 +85,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.6.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.7.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -100,7 +100,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 64 个单元测试（Swift Testing）
+make test         # 68 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -133,6 +133,7 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | SiliconFlow | 账户余额（CNY） | `GET https://api.siliconflow.cn/v1/user/info` | ✅ 官方接口 |
 | 火山方舟 | Coding Plan 5h / 周 / 月 | 本机 `arkcli`（登录后） | ✅ 官方 CLI |
 | 阿里云百炼 | Coding Plan 5h / 周 / 月 | 本机 `bl`（登录后） | ✅ 官方 CLI |
+| 阿里云（余额） | 账户可用余额（CNY） | `business.aliyuncs.com` + RPC 签名（可选 AccessKey） | ✅ 官方 API |
 | 腾讯云 | 账户余额（CNY） | `billing.tencentcloudapi.com` + TC3 签名 | ✅ 官方 API |
 | 华为云 | 账户余额（CNY） | `bss.myhuaweicloud.com` + AK/SK 签名 | ✅ 官方 API |
 | 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |

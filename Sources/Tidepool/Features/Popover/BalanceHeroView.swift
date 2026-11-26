@@ -48,7 +48,7 @@ struct BalanceHeroView: View {
             } else {
                 Text("—")
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.tertiary)
+                    .tertiaryText()
             }
 
             if let error = store.states[account.id]?.lastError {

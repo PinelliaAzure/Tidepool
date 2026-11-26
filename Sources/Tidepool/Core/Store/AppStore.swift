@@ -392,7 +392,12 @@ final class AppStore {
         }
 
         do {
-            let provider = ProviderRegistry.make(for: account)
+            let provider: BalanceProviding
+            if account.provider == .alibaba, CloudCredentials.decode(storedKey) != nil {
+                provider = AlibabaCloudProvider()
+            } else {
+                provider = ProviderRegistry.make(for: account)
+            }
             let snapshot = try await provider.fetch(apiKey: storedKey, baseURL: account.baseURL)
             snapshots[id] = snapshot
             states[id]?.lastSuccess = snapshot.fetchedAt

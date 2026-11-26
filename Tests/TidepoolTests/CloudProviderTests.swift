@@ -150,13 +150,78 @@ struct TencentSignatureTests {
     @Test func tc3Vector() {
         let signature = TencentCloudProvider.signature(
             secretKey: "TEST_SECRET",
-            date: "2026-11-26",
+            date: "2026-11-25",
             service: "billing",
             timestamp: 1_795_622_400,
             payload: "{}",
-            host: "billing.tencentcloudapi.com",
-            action: "DescribeAccountBalance"
+            host: "billing.tencentcloudapi.com"
         )
-        #expect(signature == "2697d5bd68e5251d115ab9c71d1843253de3b4746184fca87999a4433e2ee5f1")
+        #expect(signature == "2869944301bcc71c563fa74e09381b65494299a9cfd8547bf2d0e1f2cbe98a58")
+    }
+}
+
+@Suite("阿里云余额解析")
+struct AlibabaCloudBalanceTests {
+    @Test func parseAvailableAmount() throws {
+        let json = """
+        {
+          "Code": "200",
+          "Message": "success",
+          "Success": true,
+          "Data": {
+            "AvailableAmount": "10000.00",
+            "AvailableCashAmount": "8000.00",
+            "CreditAmount": "0.00",
+            "Currency": "CNY"
+          }
+        }
+        """
+        let snapshot = try AlibabaCloudProvider.parse(Data(json.utf8))
+        let balance = try #require(snapshot.balance)
+        #expect(balance.currency == "CNY")
+        #expect(abs(balance.total - 10000) < 0.001)
+        #expect(abs((balance.toppedUp ?? 0) - 8000) < 0.001)
+        #expect(balance.isAvailable)
+    }
+
+    @Test func failedResponseThrows() {
+        let json = """
+        { "Code": "NotAuthorized", "Message": "not authorized", "Success": false }
+        """
+        #expect(throws: (any Error).self) {
+            try AlibabaCloudProvider.parse(Data(json.utf8))
+        }
+    }
+}
+
+@Suite("阿里云签名")
+struct AlibabaSignatureTests {
+    @Test func rpcVector() {
+        let params: [(String, String)] = [
+            ("AccessKeyId", "testid"),
+            ("Action", "DescribeRegions"),
+            ("Format", "XML"),
+            ("SignatureMethod", "HMAC-SHA1"),
+            ("SignatureNonce", "3ee8c1b8-83d3-44af-a94f-4e0ad82fd6cf"),
+            ("SignatureVersion", "1.0"),
+            ("Timestamp", "2016-02-23T12:46:24Z"),
+            ("Version", "2014-05-26")
+        ]
+        let canonical = AlibabaCloudProvider.canonicalQuery(params)
+        #expect(canonical == "AccessKeyId=testid&Action=DescribeRegions&Format=XML&SignatureMethod=HMAC-SHA1&SignatureNonce=3ee8c1b8-83d3-44af-a94f-4e0ad82fd6cf&SignatureVersion=1.0&Timestamp=2016-02-23T12%3A46%3A24Z&Version=2014-05-26")
+        #expect(AlibabaCloudProvider.signature(secretKey: "testsecret", canonicalQuery: canonical) == "OLeaidS1JvxuMvnyHOwuJ+uX5qY=")
+    }
+}
+
+@Suite("华为云签名")
+struct HuaweiSignatureTests {
+    @Test func sdkVector() {
+        let signature = HuaweiCloudProvider.signature(
+            secretKey: "SECRETKEYEXAMPLE",
+            path: "/v2/accounts/customer-accounts/balances",
+            host: "bss.myhuaweicloud.com",
+            timestamp: "20261126T120000Z"
+        )
+        #expect(signature == "4582d5b66557d5b57905b52eab5affd38f10ff0f8c1c4018c1e29b5db200aa1c")
     }
 }

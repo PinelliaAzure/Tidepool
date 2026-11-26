@@ -67,7 +67,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .openrouter: return T("API 余额（USD）", "API credits (USD)")
         case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
         case .volcengine: return T("Coding Plan 额度（arkcli）", "Coding Plan quota (arkcli)")
-        case .alibaba: return T("Coding Plan 额度（bl）", "Coding Plan quota (bl)")
+        case .alibaba: return T("额度或余额（bl / AK/SK）", "Quota or balance (bl / AK/SK)")
         case .tencent: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
         case .huawei: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
         case .custom: return T("只读 JSON 接口", "Read-only JSON API")
@@ -93,7 +93,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .siliconFlow: return URL(string: "https://cloud.siliconflow.cn/account/ak")!
         case .volcengine: return URL(string: "https://console.volcengine.com/ark")!
         case .alibaba: return URL(string: "https://bailian.console.aliyun.com")!
-        case .tencent: return URL(string: "https://console.cloud.tencent.com/billing")!
+        case .tencent: return URL(string: "https://console.cloud.tencent.com/expense/overview")!
         case .huawei: return URL(string: "https://console.huaweicloud.com/billing")!
         case .custom: return URL(string: "https://github.com/PinelliaAzure/Tidepool")!
         }
