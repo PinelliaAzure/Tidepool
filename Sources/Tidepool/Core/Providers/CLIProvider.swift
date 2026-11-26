@@ -73,6 +73,11 @@ enum CLIExecutor {
         let errorText = String(data: errorOutput, encoding: .utf8) ?? ""
 
         guard process.terminationStatus == 0 else {
+            // 有些 CLI（例如未登录的 arkcli）把结构化错误写到 stderr 并以非 0 退出；
+            // 交给 Provider 解析，才能给出「未登录 / 无订阅 / 权限不足」这类可操作提示。
+            if let object = firstJSON(in: Data(errorText.utf8)) ?? firstJSON(in: output) {
+                return object
+            }
             throw CLIProviderError.failed(tool: tool, message: shortMessage(errorText.isEmpty ? text : errorText))
         }
         guard let object = firstJSON(in: output) else {
@@ -153,7 +158,18 @@ struct VolcengineCLIProvider: BalanceProviding {
         guard let root = json as? [String: Any] else {
             throw ProviderError.network(T("响应不是 JSON 对象", "Response is not a JSON object"))
         }
-        if let error = root["error"] as? [String: Any], let message = error["message"] as? String {
+        if root["ok"] as? Bool == false,
+           let error = root["error"] as? [String: Any],
+           let message = error["message"] as? String {
+            let lower = message.lowercased()
+            if lower.contains("not configured") || lower.contains("auth login") || lower.contains("logged_in") {
+                throw ProviderError.notSupported(
+                    T(
+                        "火山方舟尚未登录 arkcli。请在设置里点「浏览器登录」，完成火山 SSO 后再点「检测」。",
+                        "arkcli is not signed in. In Settings, use “Browser sign-in”, finish Volcengine SSO, then click Check."
+                    )
+                )
+            }
             throw ProviderError.notSupported(message)
         }
         guard let items = root["items"] as? [[String: Any]] else {

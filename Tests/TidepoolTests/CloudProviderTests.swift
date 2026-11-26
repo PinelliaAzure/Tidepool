@@ -235,3 +235,38 @@ struct HuaweiSignatureTests {
         #expect(signature == "4582d5b66557d5b57905b52eab5affd38f10ff0f8c1c4018c1e29b5db200aa1c")
     }
 }
+
+@Suite("火山方舟未登录")
+struct VolcengineLoginErrorTests {
+    @Test func notConfiguredBecomesActionable() throws {
+        let json = """
+        {
+          "ok": false,
+          "error": {
+            "type": "error",
+            "message": "not configured, run `arkcli config init --profile default` or `arkcli auth login`",
+            "trace_id": "test"
+          }
+        }
+        """
+        do {
+            _ = try VolcengineCLIProvider.parse(try JSONSerialization.jsonObject(with: Data(json.utf8)))
+            Issue.record("expected an error")
+        } catch let error as ProviderError {
+            let message = try #require(error.errorDescription)
+            #expect(message.contains("登录") || message.lowercased().contains("sign in"))
+        }
+    }
+}
+
+@Suite("CLI 结构化错误")
+struct CLIIntegrationTests {
+    @Test func structuredErrorFromStderr() throws {
+        let script = "printf '%s' '{\"ok\":false,\"error\":{\"message\":\"not configured\"}}' >&2; exit 1"
+        let json = try CLIExecutor.json(tool: "sh", arguments: ["-c", script], installHint: "")
+        let root = try #require(json as? [String: Any])
+        #expect(root["ok"] as? Bool == false)
+        let error = try #require(root["error"] as? [String: Any])
+        #expect(error["message"] as? String == "not configured")
+    }
+}

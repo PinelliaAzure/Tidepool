@@ -21,9 +21,16 @@ enum CLILoginLauncher {
               read -n 1 -s -r -p "按任意键关闭窗口…"
               exit 1
             fi
-            arkcli auth login volc-sso
+            if arkcli auth login volc-sso; then
+              echo
+              echo "登录成功。回到 Tidepool 点击「检测」。"
+            else
+              echo
+              echo "登录未完成，请查看上面的提示后重试。"
+            fi
             echo
-            echo "登录流程结束后，回到 Tidepool 点击「检测」。"
+            arkcli auth status
+            echo
             read -n 1 -s -r -p "按任意键关闭窗口…"
             """
         case .alibaba:
