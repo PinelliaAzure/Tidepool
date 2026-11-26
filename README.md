@@ -84,7 +84,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.3.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.4.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >

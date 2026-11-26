@@ -10,6 +10,22 @@ enum ProviderIconRenderer {
         let key = "\(provider.rawValue)-\(colorMode)-\(size)"
         if let cached = cache[key] { return cached }
 
+        // 云厂商使用官方彩色 logo（保留品牌色），单色模式再压成模板
+        if let encoded = ProviderLogoData.base64(for: provider),
+           let data = Data(base64Encoded: encoded),
+           let logo = NSImage(data: data) {
+            let image = raster(size: NSSize(width: size, height: size)) { rect in
+                logo.draw(in: rect)
+                if !colorMode {
+                    NSColor.black.setFill()
+                    rect.fill(using: .sourceIn)
+                }
+            }
+            image.isTemplate = !colorMode
+            cache[key] = image
+            return image
+        }
+
         guard let svg = ProviderArtwork.svg(for: provider),
               let data = svg.data(using: .utf8),
               let base = NSImage(data: data) else { return nil }
