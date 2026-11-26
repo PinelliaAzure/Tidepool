@@ -91,8 +91,8 @@ enum ProviderRegistry {
         case .siliconFlow: return SiliconFlowProvider()
         case .volcengine: return VolcengineCLIProvider()
         case .alibaba: return AlibabaCLIProvider()
-        case .tencent: return TencentCloudCLIProvider()
-        case .huawei: return HuaweiCloudCLIProvider()
+        case .tencent: return TencentCloudProvider()
+        case .huawei: return HuaweiCloudProvider()
         case .custom: return UnsupportedProvider(provider: .custom)
         }
     }

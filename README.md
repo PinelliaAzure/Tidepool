@@ -51,17 +51,18 @@ DeepSeek 官方规则（2026-11）：
 菜单栏用金额下方的 2px 状态线表示（不是角标）：橙色 = 标准价，青色 = 闲时；tooltip 显示下次切换时间。
 架构上 `ProviderPricing.schedule(for:)` 支持给其他 Provider 增加时段规则；目前只有 DeepSeek 有官方闲时定价。
 
-### 云厂商（官方 CLI）
+### 云厂商
 这几家没有简单的 Bearer 余额接口，Tidepool 通过官方 CLI 读取，不保存 AK/SK：
 
-| Provider | 读取内容 | 前置条件 |
+| Provider | 读取内容 | 凭据方式 |
 |---|---|---|
-| 火山方舟 | Coding Plan 5h / 周 / 月额度 | `npm install -g @volcengine/ark-cli` → `arkcli auth login volc-sso` |
-| 阿里云百炼 | Coding Plan 5h / 周 / 月额度 | 安装 `bl` → `bl auth login --console` |
-| 腾讯云 | 账户可用余额（分转元） | `pip install tccli` → `tccli configure` |
-| 华为云 | 账户余额 / 奖励金 | 安装 KooCLI → `hcloud configure init` |
+| 火山方舟 | Coding Plan 5h / 周 / 月额度 | 本机 `arkcli`（设置里有「浏览器登录」按钮） |
+| 阿里云百炼 | Coding Plan 5h / 周 / 月额度 | 本机 `bl`（设置里有「浏览器登录」按钮） |
+| 腾讯云 | 账户可用余额（分转元） | App 内填 SecretId / SecretKey（TC3 签名，存钥匙串） |
+| 华为云 | 账户余额 / 奖励金 | App 内填 Access Key / Secret Key（存钥匙串） |
 
-在设置里添加对应 Provider 后点「检测」即可；CLI 未安装或未登录时会显示明确提示。
+火山/阿里没有公开的 Coding Plan 额度 API，所以保留官方 CLI；点「浏览器登录」会打开官方 SSO。
+腾讯/华为不再需要 CLI，Tidepool 直接签名请求账单 API。
 
 ### 自定义接入
 设置 → 添加 Provider → 自定义：
@@ -84,7 +85,7 @@ DeepSeek 官方规则（2026-11）：
 
 ## 下载
 
-[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.4.dmg` 与 `.zip`。
+[GitHub Releases](https://github.com/PinelliaAzure/Tidepool/releases/latest) 提供 `Tidepool-0.4.5.dmg` 与 `.zip`。
 
 > **请务必把 Tidepool 拖进「应用程序」再打开，不要直接从 DMG 运行**——推出磁盘映像会导致正在运行的 App 崩溃。
 >
@@ -99,7 +100,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 60 个单元测试（Swift Testing）
+make test         # 63 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -132,8 +133,8 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | SiliconFlow | 账户余额（CNY） | `GET https://api.siliconflow.cn/v1/user/info` | ✅ 官方接口 |
 | 火山方舟 | Coding Plan 5h / 周 / 月 | 本机 `arkcli`（登录后） | ✅ 官方 CLI |
 | 阿里云百炼 | Coding Plan 5h / 周 / 月 | 本机 `bl`（登录后） | ✅ 官方 CLI |
-| 腾讯云 | 账户余额（CNY） | 本机 `tccli` + `billing.DescribeAccountBalance` | ✅ 官方 CLI |
-| 华为云 | 账户余额（CNY） | 本机 `hcloud` + `BSS.ShowCustomerAccountBalances` | ✅ 官方 CLI |
+| 腾讯云 | 账户余额（CNY） | `billing.tencentcloudapi.com` + TC3 签名 | ✅ 官方 API |
+| 华为云 | 账户余额（CNY） | `bss.myhuaweicloud.com` + AK/SK 签名 | ✅ 官方 API |
 | 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |
 
 所有接口均为只读，不消耗额度；不做网页登录 / session 抓取。

@@ -119,3 +119,28 @@ struct ProviderArtworkTests {
         #expect(ProviderIconRenderer.appMark(size: 18) != nil)
     }
 }
+
+@Suite("云凭据")
+struct CloudCredentialTests {
+    @Test func roundTrip() throws {
+        let credentials = CloudCredentials(secretId: "AKIDEXAMPLE", secretKey: "SECRET")
+        let encoded = try #require(credentials.encoded())
+        let decoded = try #require(CloudCredentials.decode(encoded))
+        #expect(decoded == credentials)
+    }
+
+    @Test func emptyCredentialsRejected() async {
+        do {
+            _ = try await TencentCloudProvider().fetch(apiKey: "", baseURL: nil)
+            Issue.record("expected error")
+        } catch {
+            #expect(error is ProviderError)
+        }
+        do {
+            _ = try await HuaweiCloudProvider().fetch(apiKey: "", baseURL: nil)
+            Issue.record("expected error")
+        } catch {
+            #expect(error is ProviderError)
+        }
+    }
+}

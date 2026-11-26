@@ -20,8 +20,8 @@ final class AppStore {
     private(set) var privacyMode: Bool
     private(set) var showPricing: Bool
 
-    /// 调试预览用：不写入真实偏好。
-    var previewSelectedID: UUID?
+    /// 当前选中的 Provider（可观察，切换 Tab 时驱动 SwiftUI 重绘）。
+    private(set) var selectedAccountID: UUID?
 
     var onMenuChanged: (() -> Void)?
     var onOpenSettings: (() -> Void)?
@@ -56,6 +56,7 @@ final class AppStore {
         keychain = KeychainStore()
         sampleStore = SampleStore(persistent: !preview)
         persistence = PersistenceController()
+        selectedAccountID = preview ? nil : Prefs.selectedAccountID
 
         guard !preview else { return }
 
@@ -82,11 +83,7 @@ final class AppStore {
 
     var selectedAccount: ProviderAccount? {
         let visible = visibleAccounts
-        if isPreview, let id = previewSelectedID,
-           let match = visible.first(where: { $0.id == id }) {
-            return match
-        }
-        if let id = Prefs.selectedAccountID,
+        if let id = selectedAccountID,
            let match = visible.first(where: { $0.id == id }) {
             return match
         }
@@ -245,6 +242,9 @@ final class AppStore {
         snapshots[id] = nil
         states[id] = nil
         keychain.delete(id)
+        if selectedAccountID == id {
+            selectedAccountID = nil
+        }
         if Prefs.selectedAccountID == id {
             Prefs.selectedAccountID = nil
         }
@@ -343,7 +343,10 @@ final class AppStore {
     }
 
     func selectAccount(id: UUID?) {
-        Prefs.selectedAccountID = id
+        selectedAccountID = id
+        if !isPreview {
+            Prefs.selectedAccountID = id
+        }
         notify()
     }
 
@@ -372,6 +375,7 @@ final class AppStore {
         guard force || states[id]?.isRefreshing != true else { return false }
         let storedKey = keychain.get(id) ?? ""
         let allowsEmptyKey = account.provider.usesCLI
+            || account.provider.requiresCloudKeys
             || (account.provider == .custom && account.custom?.authStyle == .none)
         guard allowsEmptyKey || !storedKey.isEmpty else {
             states[id]?.lastError = T("未配置 API Key", "API key not configured")
@@ -527,7 +531,7 @@ final class AppStore {
             planName: "GLM Coding Plan · Pro"
         )
 
-        previewSelectedID = ProcessInfo.processInfo.arguments.contains("--preview-quota")
+        selectedAccountID = ProcessInfo.processInfo.arguments.contains("--preview-quota")
             ? glm.id
             : deepseek.id
 

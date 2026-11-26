@@ -68,8 +68,8 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .siliconFlow: return T("API 余额（CNY）", "API balance (CNY)")
         case .volcengine: return T("Coding Plan 额度（arkcli）", "Coding Plan quota (arkcli)")
         case .alibaba: return T("Coding Plan 额度（bl）", "Coding Plan quota (bl)")
-        case .tencent: return T("账户余额（tccli）", "Account balance (tccli)")
-        case .huawei: return T("账户余额（hcloud）", "Account balance (hcloud)")
+        case .tencent: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
+        case .huawei: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
         case .custom: return T("只读 JSON 接口", "Read-only JSON API")
         }
     }
@@ -115,15 +115,23 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// 首次引导只展示无需额外 CLI 的渠道。
+    /// 首次引导只展示开箱即用的渠道。
     static var onboardingCases: [ProviderID] {
-        allCases.filter { !$0.usesCLI && $0 != .custom }
+        allCases.filter { !$0.usesCLI && !$0.requiresCloudKeys && $0 != .custom }
     }
 
-    /// 依赖本机官方 CLI（登录后读取额度/余额），不保存 API Key。
+    /// 依赖本机官方 CLI（登录后读取额度），不保存 API Key。
     var usesCLI: Bool {
         switch self {
-        case .volcengine, .alibaba, .tencent, .huawei: return true
+        case .volcengine, .alibaba: return true
+        default: return false
+        }
+    }
+
+    /// 需要云账号 AK/SK 直接签名（不依赖 CLI）。
+    var requiresCloudKeys: Bool {
+        switch self {
+        case .tencent, .huawei: return true
         default: return false
         }
     }

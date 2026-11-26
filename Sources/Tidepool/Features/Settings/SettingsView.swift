@@ -112,7 +112,7 @@ struct SettingsView: View {
             Section(T("关于", "About")) {
                 LabeledContent(
                     T("版本", "Version"),
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.4"
+                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.5"
                 )
                 HStack {
                     Button(T("重新运行首次引导…", "Run onboarding again…")) {
@@ -269,6 +269,8 @@ struct ProviderRowView: View {
     @State private var keyInput: String
     @State private var hasStoredKey: Bool
     @State private var customExpanded = false
+    @State private var secretIdInput: String
+    @State private var secretKeyInput: String
 
     init(account: ProviderAccount, draggingID: Binding<UUID?>) {
         self.account = account
@@ -277,6 +279,9 @@ struct ProviderRowView: View {
         _hasStoredKey = State(initialValue: stored)
         _keyInput = State(initialValue: "")
         _customExpanded = State(initialValue: account.provider == .custom)
+        let credentials = CloudCredentials.decode(AppStore.shared.apiKey(for: account.id))
+        _secretIdInput = State(initialValue: credentials?.secretId ?? "")
+        _secretKeyInput = State(initialValue: credentials?.secretKey ?? "")
     }
 
     var body: some View {
@@ -317,11 +322,17 @@ struct ProviderRowView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Spacer()
+                    Button(T("浏览器登录", "Browser sign-in")) {
+                        CLILoginLauncher.open(for: account.provider)
+                    }
+                    .controlSize(.small)
                     Button(T("检测", "Check")) {
                         Task { await store.refresh(account.id, force: true) }
                     }
                     .controlSize(.small)
                 }
+            } else if account.provider.requiresCloudKeys {
+                cloudKeyRow
             } else {
                 HStack(spacing: 8) {
                     SecureField("", text: $keyInput)
@@ -366,7 +377,7 @@ struct ProviderRowView: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
-            } else {
+            } else if !account.provider.usesCLI && !account.provider.requiresCloudKeys {
                 Text(regionHint)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -510,6 +521,69 @@ struct ProviderRowView: View {
                 "密钥只保存在 macOS 钥匙串，不会写入配置文件。",
                 "Keys are stored only in the macOS Keychain, never in config files."
             )
+        }
+    }
+
+    // MARK: - 云厂商 AK/SK
+
+    private var cloudKeyRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                secureField(T("SecretId", "SecretId"), text: $secretIdInput)
+                secureField(T("SecretKey", "SecretKey"), text: $secretKeyInput)
+                Button(hasStoredKey ? T("更新", "Update") : T("保存并测试", "Save & test")) {
+                    saveCloudCredentials()
+                }
+                .disabled(secretIdInput.isEmpty || secretKeyInput.isEmpty)
+                .controlSize(.small)
+            }
+            Text(cloudKeyHint)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func secureField(_ placeholder: String, text: Binding<String>) -> some View {
+        SecureField("", text: text)
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 11, design: .monospaced))
+            .labelsHidden()
+            .overlay(alignment: .leading) {
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 6)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func saveCloudCredentials() {
+        let credentials = CloudCredentials(
+            secretId: secretIdInput.trimmingCharacters(in: .whitespacesAndNewlines),
+            secretKey: secretKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        guard let encoded = credentials.encoded() else { return }
+        store.setAPIKey(id: account.id, key: encoded)
+        hasStoredKey = true
+        Task { await store.refresh(account.id, force: true) }
+    }
+
+    private var cloudKeyHint: String {
+        switch account.provider {
+        case .tencent:
+            return T(
+                "腾讯云控制台 → 访问管理 → API 密钥管理；需要账单只读权限。密钥只保存在钥匙串。",
+                "Tencent Cloud Console → CAM → API Keys; billing read-only permission is enough. Keys stay in the Keychain."
+            )
+        case .huawei:
+            return T(
+                "华为云控制台 → 我的凭证 → 访问密钥；需要 BSS 只读权限。密钥只保存在钥匙串。",
+                "Huawei Cloud Console → My Credentials → Access Keys; BSS read-only permission is enough. Keys stay in the Keychain."
+            )
+        default:
+            return ""
         }
     }
 
