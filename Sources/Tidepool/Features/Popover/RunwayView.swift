@@ -12,25 +12,17 @@ struct RunwayView: View {
         )
         VStack(alignment: .leading, spacing: 10) {
             Text(T("消耗与余量", "Spend & runway")).sectionHeader()
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 metric(T("今日消耗", "Today"), value: report.todaySpend.map(money) ?? "—")
-                divider
                 metric(T("7 天日均", "7-day avg"), value: report.dailyBurn.map(money) ?? "—")
-                divider
                 metric(T("预计可用", "Runway"), value: report.daysLeft.map { TideFormatter.duration(days: $0) } ?? T("暂无消耗", "No spend yet"))
             }
         }
         .glassCard()
     }
 
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(width: 1, height: 28)
-    }
-
     private func metric(_ title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(spacing: 3) {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -38,7 +30,7 @@ struct RunwayView: View {
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func money(_ value: Double) -> String {

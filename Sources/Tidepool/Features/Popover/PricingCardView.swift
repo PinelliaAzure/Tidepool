@@ -13,17 +13,23 @@ struct PricingCardView: View {
                     Spacer()
                     Text(status.currentLabel)
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(status.isOffPeak ? Color.green : Color.secondary)
+                        .foregroundStyle(status.isOffPeak ? Color.green : Color.red)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(
                             Capsule().fill(
-                                (status.isOffPeak ? Color.green : Color.secondary).opacity(0.12)
+                                (status.isOffPeak ? Color.green : Color.red).opacity(0.12)
                             )
                         )
                 }
 
                 timeline(schedule: schedule, now: status.now)
+
+                HStack(spacing: 12) {
+                    legend(color: .red, text: T("峰时 · 标准价", "Peak · standard"))
+                    legend(color: .green, text: T("闲时 · \(schedule.discountLabel)", "Off-peak · \(schedule.discountLabel)"))
+                    Spacer()
+                }
 
                 Text(status.schedule.peakDetail)
                     .font(.caption2)
@@ -50,7 +56,8 @@ struct PricingCardView: View {
         }
     }
 
-    /// 24 小时条：橙色为工作日标准价时段，竖线为当前时间。
+    /// 严格按 24 小时划分：谷时（闲时）绿色铺满，峰时（标准价）红色覆盖对应时段，
+    /// 周末全天闲时所以整条为绿；竖线为当前时刻。
     private func timeline(schedule: PricingSchedule, now: Date) -> some View {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = schedule.timeZone
@@ -60,21 +67,23 @@ struct PricingCardView: View {
 
         return GeometryReader { proxy in
             ZStack(alignment: .leading) {
+                // 谷时：闲时折扣
                 Capsule()
-                    .fill(Color.primary.opacity(0.06))
+                    .fill(Color.green.opacity(0.32))
 
+                // 峰时：工作日标准价时段（周末全天闲时，不画红段）
                 if !isWeekend {
                     ForEach(Array(schedule.peakWindows.enumerated()), id: \.offset) { _, window in
                         let width = proxy.size.width * CGFloat(window.endMinute - window.startMinute) / 1440
-                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(Color.orange.opacity(0.26))
+                        Rectangle()
+                            .fill(Color.red.opacity(0.5))
                             .frame(width: width)
                             .offset(x: proxy.size.width * CGFloat(window.startMinute) / 1440)
                     }
                 }
 
                 Rectangle()
-                    .fill(Color.primary.opacity(0.55))
+                    .fill(Color.primary.opacity(0.75))
                     .frame(width: 1.2)
                     .offset(x: min(max(proxy.size.width * currentMinute / 1440, 0), proxy.size.width - 1))
             }
@@ -94,5 +103,16 @@ struct PricingCardView: View {
             .offset(y: 11)
         }
         .padding(.bottom, 10)
+    }
+
+    private func legend(color: Color, text: String) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 5, height: 5)
+            Text(text)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
     }
 }

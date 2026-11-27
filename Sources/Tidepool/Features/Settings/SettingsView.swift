@@ -39,19 +39,7 @@ struct SettingsView: View {
                     }
                 }
                 Toggle(T("使用彩色品牌图标", "Color brand icon"), isOn: colorBinding)
-                Text(T(
-                    "关闭时使用单色模板图标，自动适配浅色 / 深色菜单栏。",
-                    "Off uses a monochrome template icon that adapts to light and dark menu bars."
-                ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
                 Toggle(T("显示计价时段", "Show pricing window"), isOn: pricingBinding)
-                Text(T(
-                    "DeepSeek 工作日高峰为标准价，其余时段 5 折；金额下方橙色为标准价、青色为闲时。",
-                    "DeepSeek charges standard rates during weekday peak hours and 50% off otherwise; an orange underline means peak, teal means off-peak."
-                ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
 
             Section(T("提醒", "Alerts")) {
@@ -149,12 +137,6 @@ struct SettingsView: View {
             } label: {
                 Label(T("添加 Provider", "Add provider"), systemImage: "plus")
             }
-            Text(T(
-                "DeepSeek / Kimi 显示 API 余额；GLM / Kimi Code 显示套餐余量。",
-                "DeepSeek / Kimi show API balance; GLM / Kimi Code show plan quotas."
-            ))
-            .font(.caption2)
-            .foregroundStyle(.secondary)
         }
     }
 
@@ -392,7 +374,7 @@ struct ProviderRowView: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                 }
-            } else if !account.provider.usesCLI && !account.provider.requiresCloudKeys {
+            } else if !account.provider.usesCLI && !account.provider.requiresCloudKeys && !regionHint.isEmpty {
                 Text(regionHint)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -556,10 +538,7 @@ struct ProviderRowView: View {
                 "Get the key from Kimi For Coding on platform.kimi.com."
             )
         default:
-            return T(
-                "密钥只保存在 macOS 钥匙串，不会写入配置文件。",
-                "Keys are stored only in the macOS Keychain, never in config files."
-            )
+            return ""
         }
     }
 
@@ -679,8 +658,8 @@ struct ProviderRowView: View {
     private var cloudKeyRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                secureField(T("SecretId", "SecretId"), text: $secretIdInput)
-                secureField(T("SecretKey", "SecretKey"), text: $secretKeyInput)
+                secureField(cloudKeyIdPlaceholder, text: $secretIdInput)
+                secureField(cloudKeySecretPlaceholder, text: $secretKeyInput)
                 Button(hasStoredKey ? T("更新", "Update") : T("保存并测试", "Save & test")) {
                     saveCloudCredentials()
                 }
@@ -696,6 +675,23 @@ struct ProviderRowView: View {
             Text(cloudKeyHint)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 各云厂商对密钥的叫法不同。
+    private var cloudKeyIdPlaceholder: String {
+        switch account.provider {
+        case .qianfan: return T("Access Key ID", "Access Key ID")
+        case .alibaba: return T("AccessKey ID", "AccessKey ID")
+        default: return T("SecretId", "SecretId")
+        }
+    }
+
+    private var cloudKeySecretPlaceholder: String {
+        switch account.provider {
+        case .qianfan: return T("Secret Access Key", "Secret Access Key")
+        case .alibaba: return T("AccessKey Secret", "AccessKey Secret")
+        default: return T("SecretKey", "SecretKey")
         }
     }
 
@@ -738,18 +734,23 @@ struct ProviderRowView: View {
         switch account.provider {
         case .tencent:
             return T(
-                "腾讯云控制台 → 访问管理 → API 密钥管理；需要账单只读权限。密钥只保存在钥匙串。",
-                "Tencent Cloud Console → CAM → API Keys; billing read-only permission is enough. Keys stay in the Keychain."
+                "腾讯云控制台 → 访问管理 → API 密钥管理；需要账单只读权限。",
+                "Tencent Cloud Console → CAM → API Keys; billing read-only permission is enough."
             )
         case .huawei:
             return T(
-                "华为云控制台 → 我的凭证 → 访问密钥；需要 BSS 只读权限。密钥只保存在钥匙串。",
-                "Huawei Cloud Console → My Credentials → Access Keys; BSS read-only permission is enough. Keys stay in the Keychain."
+                "华为云控制台 → 我的凭证 → 访问密钥；需要 BSS 只读权限。",
+                "Huawei Cloud Console → My Credentials → Access Keys; BSS read-only permission is enough."
+            )
+        case .qianfan:
+            return T(
+                "查余额用的是百度智能云账号级 Access Key / Secret Key（控制台右上角 → 安全认证）；千帆模型服务的 API Key（bce-v3/…）查不了余额。",
+                "Balance uses the account-level Access Key / Secret Key (Console → Security Authentication). The Qianfan model API Key (bce-v3/…) cannot query balance."
             )
         case .alibaba:
             return T(
-                "可选：填阿里云 AccessKey ID / Secret 读取账户余额（BSS）。留空则用 bl 读 Coding Plan / Token Plan；密钥只保存在钥匙串。",
-                "Optional: enter an Alibaba Cloud AccessKey ID/Secret to read account balance (BSS). Leave blank to use bl for Coding Plan / Token Plan. Keys stay in the Keychain."
+                "可选：填阿里云 AccessKey ID / Secret 读取账户余额（BSS）；留空则用 bl 读 Coding Plan / Token Plan。",
+                "Optional: enter an Alibaba Cloud AccessKey ID/Secret to read account balance (BSS). Leave blank to use bl for Coding Plan / Token Plan."
             )
         default:
             return ""
@@ -769,6 +770,7 @@ struct ProviderRowView: View {
         case .alibaba: return T("需要安装并登录 bl", "Install and sign in to bl")
         case .tencent: return T("填写 SecretId / SecretKey（存钥匙串）", "Enter SecretId / SecretKey (stored in the Keychain)")
         case .huawei: return T("填写 Access Key / Secret Key（存钥匙串）", "Enter Access Key / Secret Key (stored in the Keychain)")
+        case .qianfan: return T("填写 Access Key / Secret Key（存钥匙串）", "Enter Access Key / Secret Key (stored in the Keychain)")
         default: return ""
         }
     }

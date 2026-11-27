@@ -162,6 +162,88 @@ struct CloudProviderTests {
         #expect(abs(balance.total - 120.5) < 0.001)
         #expect(abs((balance.granted ?? 0) - 20) < 0.001)
     }
+
+    @Test func baiduBalance() throws {
+        let json = """
+        { "cashBalance": 850.0000 }
+        """
+        let snapshot = try BaiduBalanceParser.parse(try object(json))
+        let balance = try #require(snapshot.balance)
+        #expect(balance.currency == "CNY")
+        #expect(abs(balance.total - 850) < 0.001)
+        #expect(balance.isAvailable)
+        #expect(snapshot.planName == "Baidu Qianfan")
+    }
+
+    @Test func baiduBalanceAsStringAndDebt() throws {
+        let stringForm = """
+        { "cashBalance": "12.34" }
+        """
+        let snapshot = try BaiduBalanceParser.parse(try object(stringForm))
+        #expect(abs((snapshot.balance?.total ?? 0) - 12.34) < 0.001)
+
+        let debt = """
+        { "cashBalance": -3.5 }
+        """
+        let negative = try BaiduBalanceParser.parse(try object(debt))
+        #expect(abs((negative.balance?.total ?? 0) + 3.5) < 0.001)
+        #expect(negative.balance?.isAvailable == false)
+    }
+
+    @Test func baiduErrorMessage() throws {
+        let json = """
+        { "requestId": "ae8b3bf1-3e2f-4a9c", "code": "AuthnError", "message": "signature not match" }
+        """
+        do {
+            _ = try BaiduBalanceParser.parse(try object(json))
+            Issue.record("expected an error")
+        } catch let error as ProviderError {
+            #expect(error.errorDescription == "signature not match")
+        }
+    }
+}
+
+@Suite("百度 BCE 签名")
+struct BaiduSignatureTests {
+    @Test func authorizationVector() {
+        // 基准向量由 Python hmac 标准库独立计算
+        let authorization = BaiduCloudProvider.authorization(
+            accessKey: "AKTEST1234567890",
+            secretKey: "SKTEST-secret",
+            timestamp: "2026-01-02T03:04:05Z",
+            method: "POST",
+            path: "/v1/finance/cash/balance",
+            query: "",
+            headers: ["host": "billing.baidubce.com", "content-type": "application/json; charset=utf-8"]
+        )
+        #expect(
+            authorization
+                == "bce-auth-v1/AKTEST1234567890/2026-01-02T03:04:05Z/1800/content-type;host/"
+                    + "01bb7c63698a3816882967e749a63f95890cf7ca94375bd9b9502b7c3448b857"
+        )
+    }
+
+    @Test func uriEncodeFollowsRFC3986() {
+        #expect(
+            BaiduCloudProvider.uriEncode("application/json; charset=utf-8")
+                == "application%2Fjson%3B%20charset%3Dutf-8"
+        )
+        #expect(BaiduCloudProvider.uriEncode("a-b_c.d~e") == "a-b_c.d~e")
+        #expect(BaiduCloudProvider.uriEncode("a/b", encodeSlash: false) == "a/b")
+        #expect(BaiduCloudProvider.uriEncodeExceptSlash("/v1/finance/cash/balance") == "/v1/finance/cash/balance")
+        #expect(BaiduCloudProvider.utcTimestamp(date: Date(timeIntervalSince1970: 1_767_225_600)) == "2026-01-01T00:00:00Z")
+    }
+
+    @Test func qianfanApiKeyGetsTargetedError() async {
+        do {
+            _ = try await BaiduCloudProvider().fetch(apiKey: "bce-v3/ALTAK-example/secret", baseURL: nil)
+            Issue.record("expected an error")
+        } catch let error as ProviderError {
+            #expect(error.errorDescription?.contains("API Key") == true)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
 }
 
 @Suite("Provider 图标资源")

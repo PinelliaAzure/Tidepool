@@ -14,6 +14,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     case alibaba
     case tencent
     case huawei
+    case qianfan
     case custom
 
     var id: String { rawValue }
@@ -30,6 +31,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .alibaba: return T("阿里云百炼", "Alibaba Model Studio")
         case .tencent: return T("腾讯云", "Tencent Cloud")
         case .huawei: return T("华为云", "Huawei Cloud")
+        case .qianfan: return T("百度千帆", "Baidu Qianfan")
         case .custom: return T("自定义", "Custom")
         }
     }
@@ -47,6 +49,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .alibaba: return 0xFF6A00
         case .tencent: return 0x006EFF
         case .huawei: return 0xCF0A2C
+        case .qianfan: return 0x4346F5
         case .custom: return 0x8E8E93
         }
     }
@@ -70,6 +73,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .alibaba: return T("Coding / Token Plan 或余额", "Coding / Token Plan or balance")
         case .tencent: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
         case .huawei: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
+        case .qianfan: return T("账户余额（AK/SK）", "Account balance (AK/SK)")
         case .custom: return T("只读 JSON 接口", "Read-only JSON API")
         }
     }
@@ -78,7 +82,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     var isQuotaProvider: Bool {
         switch self {
         case .kimiCode, .glm: return true
-        case .deepseek, .moonshot, .openrouter, .siliconFlow, .volcengine, .alibaba, .tencent, .huawei, .custom:
+        case .deepseek, .moonshot, .openrouter, .siliconFlow, .volcengine, .alibaba, .tencent, .huawei, .qianfan, .custom:
             return false
         }
     }
@@ -95,6 +99,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .alibaba: return URL(string: "https://bailian.console.aliyun.com")!
         case .tencent: return URL(string: "https://console.cloud.tencent.com/expense/overview")!
         case .huawei: return URL(string: "https://console.huaweicloud.com/billing")!
+        case .qianfan: return URL(string: "https://console.bce.baidu.com/iam/#/iam/accesslist")!
         case .custom: return URL(string: "https://github.com/PinelliaAzure/Tidepool")!
         }
     }
@@ -112,6 +117,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
         case .alibaba: return URL(string: "https://dashscope.aliyuncs.com")!
         case .tencent: return URL(string: "https://billing.tencentcloudapi.com")!
         case .huawei: return URL(string: "https://bss.myhuaweicloud.com")!
+        case .qianfan: return URL(string: "https://billing.baidubce.com")!
         case .custom: return URL(string: "https://example.com")!
         }
     }
@@ -135,7 +141,7 @@ enum ProviderID: String, Codable, CaseIterable, Identifiable {
     /// 需要云账号 AK/SK 直接签名（不依赖 CLI）。
     var requiresCloudKeys: Bool {
         switch self {
-        case .tencent, .huawei: return true
+        case .tencent, .huawei, .qianfan: return true
         default: return false
         }
     }
@@ -281,15 +287,15 @@ struct ProviderSnapshot: Codable, Equatable {
 enum MenuBarStyle: String, CaseIterable, Identifiable {
     case single
     case all
-    case tightest
+    case allCompact
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .single: return T("当前 Provider", "Current provider")
-        case .all: return T("全部（紧凑）", "All (compact)")
-        case .tightest: return T("最紧张的一项", "Tightest quota")
+        case .all: return T("全部", "All")
+        case .allCompact: return T("全部（紧凑）", "All (compact)")
         }
     }
 }

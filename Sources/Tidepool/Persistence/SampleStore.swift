@@ -45,7 +45,6 @@ final class SampleStore {
 
     func appendQuota(accountID: UUID, kind: QuotaKind, percent: Double, now: Date) {
         var list = quotaData[accountID] ?? []
-        // 同一额度窗口内，15 分钟内且变化小于 0.5% 的采样忽略
         if let last = list.last(where: { $0.kind == kind }),
            now.timeIntervalSince(last.date) < 900,
            abs(last.remainingPercent - percent) < 0.5 {

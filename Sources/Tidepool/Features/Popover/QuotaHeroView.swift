@@ -1,8 +1,8 @@
 import Charts
 import SwiftUI
 
-/// 额度型 Provider（GLM / Kimi Code）的 Hero：
-/// 双环（5 小时 / 本周）+ 重置倒计时 + 节奏判断。
+/// 额度型 Provider（GLM / Kimi Code / 火山方舟 / 阿里云百炼）的 Hero：
+/// 双环（5 小时 / 本周）+ 重置倒计时 + 节奏判断；月额度单独一行。
 struct QuotaHeroView: View {
     let account: ProviderAccount
     @Environment(AppStore.self) private var store
@@ -131,10 +131,20 @@ struct QuotaHeroView: View {
         .padding(.top, 2)
     }
 
+    /// 月额度文案：GLM 的月额度是网页工具（MCP）额度，其他家是普通月度配额。
+    private var monthlyLabel: String {
+        switch account.provider {
+        case .glm:
+            return T("网页工具 · 本月", "Web tools · monthly")
+        default:
+            return T("本月额度", "Monthly quota")
+        }
+    }
+
     private func monthlyRow(_ quota: QuotaWindow) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(T("网页工具 · 本月", "Web tools · monthly"))
+                Text(monthlyLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()

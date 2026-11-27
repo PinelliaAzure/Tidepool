@@ -62,6 +62,10 @@ enum ProviderArtwork {
 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h4.2v7.1h9.6V3H21v18h-4.2v-7.2H7.2V21H3V3z"/></svg>
 """#
 
+    static let qianfan: String = #"""
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4 3h7.6a4.7 4.7 0 0 1 4 7.2A5.3 5.3 0 0 1 12.7 21H4V3zm4.2 4v3.1h3.3a1.55 1.55 0 0 0 0-3.1H8.2zm0 6.9v3.1h4a1.55 1.55 0 0 0 0-3.1h-4z"/></svg>
+"""#
+
     static let custom: String = #"""
 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.9 2h2.2v6.2l4.4-4.4 1.6 1.6-4.4 4.4H21v2.2h-6.3l4.4 4.4-1.6 1.6-4.4-4.4V21h-2.2v-6.3l-4.4 4.4-1.6-1.6 4.4-4.4H3v-2.2h6.3L4.9 5.4l1.6-1.6 4.4 4.4V2z"/></svg>
 """#
@@ -78,6 +82,7 @@ enum ProviderArtwork {
         case .alibaba: return alibaba
         case .tencent: return tencent
         case .huawei: return huawei
+        case .qianfan: return qianfan
         case .custom: return custom
         }
     }

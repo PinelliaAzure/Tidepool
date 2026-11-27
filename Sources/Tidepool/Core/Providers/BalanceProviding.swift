@@ -93,6 +93,7 @@ enum ProviderRegistry {
         case .alibaba: return AlibabaCLIProvider()
         case .tencent: return TencentCloudProvider()
         case .huawei: return HuaweiCloudProvider()
+        case .qianfan: return BaiduCloudProvider()
         case .custom: return UnsupportedProvider(provider: .custom)
         }
     }

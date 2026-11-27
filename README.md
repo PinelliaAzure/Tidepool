@@ -11,7 +11,7 @@ macOS 菜单栏里的多平台 AI 余额与余量仪表盘：品牌图标旁边�
   <img src="docs/preview-quota.png" width="360" alt="额度视图">
 </p>
 
-- **多平台**：DeepSeek / Kimi / Kimi Code / GLM / OpenRouter / SiliconFlow / 火山方舟 / 阿里云百炼 / 腾讯云 / 华为云；还能用「自定义」接入任意只读 JSON 接口
+- **多平台**：DeepSeek / Kimi / Kimi Code / GLM / OpenRouter / SiliconFlow / 火山方舟 / 阿里云百炼 / 腾讯云 / 华为云 / 百度千帆；还能用「自定义」接入任意只读 JSON 接口
 - **余额与额度**：API 余额、Coding Plan 5 小时 / 周额度、自定义百分比
 - **实时计价**：DeepSeek 工作日高峰为标准价、其余时段 5 折；金额下方橙 / 青状态线 + 24h 时段条
 - **额度节奏**：用「时间进度 vs 用量进度」判断会不会提前用完，而不只给一个百分比
@@ -60,9 +60,10 @@ DeepSeek 官方规则（2026-11）：
 | 阿里云百炼 | Coding Plan 额度，或账户余额 | 本机 `bl`（浏览器登录）；也可选填 AccessKey 读账户余额 |
 | 腾讯云 | 账户可用余额（分转元） | App 内填 SecretId / SecretKey（TC3 签名，存钥匙串） |
 | 华为云 | 账户余额 / 奖励金 | App 内填 Access Key / Secret Key（存钥匙串） |
+| 百度千帆 | 账户余额 | App 内填 Access Key / Secret Key（BCE 签名，存钥匙串） |
 
 火山/阿里没有公开的 Coding Plan 额度 API，所以保留官方 CLI；点「浏览器登录」会打开官方 SSO。阿里云账号若没有 Coding Plan，`bl` 会返回 No active Coding Plan subscription，此时在设置里填 AccessKey（可选）即可改用 BSS 账户余额。
-腾讯/华为不再需要 CLI，Tidepool 直接签名请求账单 API。
+腾讯/华为/百度不再需要 CLI，Tidepool 直接签名请求账单 API。
 
 ### 自定义接入
 设置 → 添加 Provider → 自定义：
@@ -100,7 +101,7 @@ DeepSeek 官方规则（2026-11）：
 make app          # 打包 build/Tidepool.app
 open build/Tidepool.app
 
-make test         # 88 个单元测试（Swift Testing）
+make test         # 94 个单元测试（Swift Testing）
 make build        # 只编译
 ```
 
@@ -120,7 +121,7 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 
 > 纯 Command Line Tools 环境下，macOS 27 SDK 缺少 SwiftUI 宏插件（`SwiftUIMacros`），
 > `Makefile` / `build-app.sh` 会自动回退到 MacOSX26.5 SDK（裸 `swift run` 仍会失败，
-> 预览请用 `make preview`）；安装了完整 Xcode 则无需处理。
+> 预览请用 `make preview`）；`xcode-select` 指向完整 Xcode 时则无需处理。
 >
 > 发布版本号以仓库根目录的 `VERSION` 文件为单一来源，`build-app.sh` 会把它写进
 > `Info.plist` 的 `CFBundleShortVersionString`（构建号取 git 提交数，可用 `TIDEPOOL_BUILD` 覆盖）。
@@ -140,6 +141,7 @@ swift run Tidepool --demo-menu-bar      # 真实菜单栏 + 假数据（调试�
 | 阿里云（余额） | 账户可用余额（CNY） | `business.aliyuncs.com` + RPC 签名（可选 AccessKey） | ✅ 官方 API |
 | 腾讯云 | 账户余额（CNY） | `billing.tencentcloudapi.com` + TC3 签名 | ✅ 官方 API |
 | 华为云 | 账户余额（CNY） | `bss.myhuaweicloud.com` + AK/SK 签名 | ✅ 官方 API |
+| 百度千帆 | 账户余额（CNY） | `billing.baidubce.com` + BCE 签名 | ✅ 官方 API |
 | 自定义 | 任意只读 JSON | 用户配置 endpoint + 点路径 | ✅ 自建 |
 
 > SiliconFlow 国内站 `/v1/user/info` 已于 2026-08-14 下线（HTTP 410），官方尚未发布替代余额 API。Tidepool 支持两种方式读取国内站控制台余额：**在 Tidepool 内置窗口登录**（推荐，无需系统权限），或**从 Safari 读取登录态**（需要给 Tidepool 完全磁盘访问权限）。登录态只保存在钥匙串，仅发送给 `cloud.siliconflow.cn`，可随时断开。国际站账号仍可切换到 `api.siliconflow.com`（USD）。

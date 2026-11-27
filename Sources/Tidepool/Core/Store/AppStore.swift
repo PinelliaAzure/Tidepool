@@ -108,52 +108,78 @@ final class AppStore {
 
     // MARK: - 菜单栏内容
 
+    /// 「全部」模式的分项。
+    struct MenuBarItem {
+        var provider: ProviderID
+        /// 紧凑值（已带颜色：低余额黄 / 归零红 / 默认）。
+        var value: NSAttributedString
+        /// 右下角圆点：峰时红 / 谷时绿 / 其他白，全平台统一。
+        var dotColor: NSColor
+    }
+
     struct MenuBarContent {
-        var text: String?
-        var accent: NSColor?
+        /// 单 / 紧凑模式的菜单栏文字（已带颜色）。
+        var title: NSAttributedString?
         var provider: ProviderID?
-        var alert: Bool
-        /// 有计价时段时，金额下方状态线的颜色（橙=标准价，青=闲时）。
-        var pricingTint: NSColor?
         var tooltip: String
+        /// 单 Provider 模式下主账户 logo 右下角的圆点颜色。
+        var dotColor: NSColor?
+        /// 「全部」模式的分项：每个 Provider 一个品牌 logo + 紧凑值（隐私模式下已打码）。
+        var allItems: [MenuBarItem] = []
     }
 
     var menuBarContent: MenuBarContent {
         let visible = visibleAccounts
         guard !visible.isEmpty else {
-            return MenuBarContent(text: nil, accent: nil, alert: false, pricingTint: nil, tooltip: T("Tidepool — 点击添加 Provider", "Tidepool — click to add a provider"))
+            return MenuBarContent(
+                title: nil,
+                provider: nil,
+                tooltip: T("Tidepool — 点击添加 Provider", "Tidepool — click to add a provider")
+            )
         }
 
-        var text: String?
+        var title: NSAttributedString?
         var primary: ProviderAccount?
+        var allItems: [MenuBarItem] = []
+        var dotColor: NSColor?
 
         switch menuBarStyle {
         case .single:
             primary = selectedAccount
             if let account = primary {
-                text = compactValue(for: account)?.text
-                    ?? (states[account.id]?.lastError != nil ? "…" : nil)
+                if let value = compactValue(for: account) {
+                    title = menuBarText(value, color: valueColor(for: account))
+                } else if states[account.id]?.lastError != nil {
+                    title = menuBarText("…", color: nil)
+                }
+                dotColor = statusDotColor(for: account.provider)
             }
         case .all:
             primary = selectedAccount
-            let values = visible.compactMap { compactValue(for: $0)?.text }
-            text = values.isEmpty ? nil : values.joined(separator: " · ")
-        case .tightest:
-            let quotaAccounts = visible.filter { !(snapshots[$0.id]?.quotas.isEmpty ?? true) }
-            let candidates = quotaAccounts.isEmpty ? visible : quotaAccounts
-            primary = candidates.min { lhs, rhs in
-                (compactValue(for: lhs)?.health ?? 100.5) < (compactValue(for: rhs)?.health ?? 100.5)
+            for account in visible {
+                guard let value = compactValue(for: account) else { continue }
+                let text = menuBarText(value, color: valueColor(for: account))
+                allItems.append(
+                    MenuBarItem(
+                        provider: account.provider,
+                        value: text,
+                        dotColor: statusDotColor(for: account.provider)
+                    )
+                )
             }
-            if let account = primary {
-                text = compactValue(for: account)?.text
-                    ?? (states[account.id]?.lastError != nil ? "…" : nil)
-            }
+            title = joinedMenuBarText(allItems.map(\.value))
+        case .allCompact:
+            primary = selectedAccount
+            let values = visible.map { account -> NSAttributedString? in
+                guard let value = compactValue(for: account) else { return nil }
+                return menuBarText(value, color: valueColor(for: account))
+            }.compactMap { $0 }
+            title = joinedMenuBarText(values)
         }
 
-        let alert = visible.contains(where: isAlert)
         let summary = visible.compactMap { account -> String? in
             guard let value = compactValue(for: account) else { return nil }
-            return privacyMode ? account.name : "\(account.name) \(value.text)"
+            return privacyMode ? account.name : "\(account.name) \(value)"
         }
         var tooltip = summary.isEmpty ? "Tidepool" : summary.joined(separator: " · ")
 
@@ -174,44 +200,82 @@ final class AppStore {
             tooltip += "（\(ProviderPricing.timeText(pricing.nextTransition, in: pricing.schedule)) \(pricing.nextLabel)）"
         }
 
-        let pricingTint: NSColor?
-        if showPricing, menuBarStyle != .all, let pricing {
-            pricingTint = pricing.isOffPeak ? .systemTeal : .systemOrange
-        } else {
-            pricingTint = nil
-        }
-
         return MenuBarContent(
-            text: text,
-            accent: primary?.provider.nsBrandColor,
-            provider: menuBarStyle == .all ? nil : primary?.provider,
-            alert: alert,
-            pricingTint: pricingTint,
-            tooltip: tooltip
+            title: title,
+            provider: menuBarStyle == .single ? primary?.provider : nil,
+            tooltip: tooltip,
+            dotColor: menuBarStyle == .single ? dotColor : nil,
+            allItems: allItems
         )
     }
 
-    /// 单个账户在菜单栏里的紧凑值；额度型取最紧张的窗口。
-    private func compactValue(for account: ProviderAccount) -> (text: String, health: Double?)? {
+    /// 菜单栏数值的默认字体与颜色（低余额黄 / 归零红 / 默认跟随系统）。
+    private func menuBarText(_ string: String, color: NSColor?) -> NSAttributedString {
+        NSAttributedString(
+            string: string,
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: color ?? NSColor.labelColor
+            ]
+        )
+    }
+
+    private let menuBarSeparator = NSAttributedString(
+        string: " · ",
+        attributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: .regular),
+            .foregroundColor: NSColor.secondaryLabelColor
+        ]
+    )
+
+    private func joinedMenuBarText(_ parts: [NSAttributedString]) -> NSAttributedString? {
+        guard !parts.isEmpty else { return nil }
+        let joined = NSMutableAttributedString()
+        for (index, part) in parts.enumerated() {
+            if index > 0 { joined.append(menuBarSeparator) }
+            joined.append(part)
+        }
+        return joined
+    }
+
+    /// 右下角圆点颜色——全平台统一：峰时红·常亮，谷时绿·常亮，
+    /// 没有峰谷定价的渠道白点。目前只有 DeepSeek 有官方峰谷定价。
+    /// 圆点是状态指示，不受「菜单栏显示计价时段」开关影响。
+    private func statusDotColor(for provider: ProviderID) -> NSColor {
+        guard let pricing = ProviderPricing.status(for: provider) else {
+            return NSColor.white
+        }
+        return pricing.isOffPeak ? .systemGreen : .systemRed
+    }
+
+    /// 数值文字颜色：归零（含负数）红；余额 ≤¥10 或最紧张额度 ≤10% 黄；正常默认色。
+    private func valueColor(for account: ProviderAccount) -> NSColor? {
         guard let snapshot = snapshots[account.id] else { return nil }
         if let balance = snapshot.balance {
-            if privacyMode {
-                return (TideFormatter.currencySymbol(for: balance.currency) + "•••", nil)
-            }
-            return (TideFormatter.money(balance.total, currency: balance.currency, style: .menuBar), nil)
+            if balance.total <= 0 { return .systemRed }
+            if balance.total <= Self.lowBalanceThreshold { return .systemYellow }
+            return nil
         }
+        // 额度型（火山方舟 / GLM / Kimi Code 等）：最紧张窗口剩余 ≤10% 黄，归零红
         if let quota = snapshot.tightestQuota {
-            return (privacyMode ? "•••" : TideFormatter.percent(quota.remainingPercent), quota.remainingPercent)
+            if quota.remainingPercent <= 0 { return .systemRed }
+            if quota.remainingPercent <= 10 { return .systemYellow }
         }
         return nil
     }
 
-    private func isAlert(_ account: ProviderAccount) -> Bool {
-        guard let snapshot = snapshots[account.id] else { return false }
+    /// 单个账户在菜单栏里的紧凑值；额度型取最紧张的窗口。
+    private func compactValue(for account: ProviderAccount) -> String? {
+        guard let snapshot = snapshots[account.id] else { return nil }
         if let balance = snapshot.balance {
-            return !balance.isAvailable || balance.total <= Self.lowBalanceThreshold
+            return privacyMode
+                ? TideFormatter.currencySymbol(for: balance.currency) + "•••"
+                : TideFormatter.money(balance.total, currency: balance.currency, style: .menuBar)
         }
-        return snapshot.quotas.contains { $0.remainingPercent <= 10 }
+        if let quota = snapshot.tightestQuota {
+            return privacyMode ? "•••" : TideFormatter.percent(quota.remainingPercent)
+        }
+        return nil
     }
 
     // MARK: - 账户管理

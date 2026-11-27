@@ -26,26 +26,89 @@ if ProcessInfo.processInfo.arguments.contains("--usage-report") {
 if ProcessInfo.processInfo.arguments.contains("--dump-icon") {
     MainActor.assumeIsolated {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-        let variants: [(String, ProviderID?, Bool, Bool)] = [
-            ("tidepool-app-mark.png", nil, true, false),
-            ("tidepool-deepseek-color.png", .deepseek, true, false),
-            ("tidepool-deepseek-mono.png", .deepseek, false, false),
-            ("tidepool-kimi.png", .moonshot, true, false),
-            ("tidepool-kimicode-color.png", .kimiCode, true, false),
-            ("tidepool-kimicode-mono.png", .kimiCode, false, false),
-            ("tidepool-glm.png", .glm, true, false),
-            ("tidepool-openrouter.png", .openrouter, true, false),
-            ("tidepool-siliconflow.png", .siliconFlow, true, false)
+        let variants: [(String, ProviderID?)] = [
+            ("tidepool-app-mark.png", nil),
+            ("tidepool-deepseek-color.png", .deepseek),
+            ("tidepool-deepseek-mono.png", .deepseek),
+            ("tidepool-kimi.png", .moonshot),
+            ("tidepool-kimicode-color.png", .kimiCode),
+            ("tidepool-kimicode-mono.png", .kimiCode),
+            ("tidepool-glm.png", .glm),
+            ("tidepool-openrouter.png", .openrouter),
+            ("tidepool-siliconflow.png", .siliconFlow),
+            ("tidepool-volcengine-color.png", .volcengine),
+            ("tidepool-tencent-color.png", .tencent),
+            ("tidepool-huawei-color.png", .huawei),
+            ("tidepool-alibaba-color.png", .alibaba),
+            ("tidepool-qianfan-color.png", .qianfan)
         ]
-        for (name, provider, colorMode, alert) in variants {
+        for (name, provider) in variants {
             let image = StatusIconRenderer.menuBarIcon(
                 provider: provider,
-                colorMode: colorMode,
-                alert: alert,
+                colorMode: true,
+                dot: provider == .deepseek ? NSColor.systemRed : NSColor.white,
                 size: 256
             )
             let url = directory.appendingPathComponent(name)
             if let tiff = image.tiffRepresentation,
+               let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: url)
+                print(url.path)
+            }
+        }
+
+        // 单色模式下的彩色圆点
+        let monoVariants: [(String, ProviderID, NSColor)] = [
+            ("tidepool-deepseek-mono-red.png", .deepseek, .systemRed),
+            ("tidepool-deepseek-mono-green.png", .deepseek, .systemGreen),
+            ("tidepool-volcengine-mono-white.png", .volcengine, .white)
+        ]
+        for (name, provider, dot) in monoVariants {
+            let image = StatusIconRenderer.menuBarIcon(
+                provider: provider,
+                colorMode: false,
+                dot: dot,
+                size: 256
+            )
+            let url = directory.appendingPathComponent(name)
+            if let tiff = image.tiffRepresentation,
+               let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: url)
+                print(url.path)
+            }
+        }
+
+        // 「全部」模式合成图（logo + 数值 + 状态圆点）
+        func sample(_ string: String) -> NSAttributedString {
+            NSAttributedString(
+                string: string,
+                attributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
+                    .foregroundColor: NSColor.black
+                ]
+            )
+        }
+        let allItems: [AppStore.MenuBarItem] = [
+            AppStore.MenuBarItem(provider: .deepseek, value: sample("¥42.50"), dotColor: .systemRed),
+            AppStore.MenuBarItem(provider: .moonshot, value: sample("¥156.8"), dotColor: .white),
+            AppStore.MenuBarItem(provider: .glm, value: sample("72%"), dotColor: .white),
+            AppStore.MenuBarItem(provider: .qianfan, value: sample("88.80"), dotColor: .systemGreen),
+            AppStore.MenuBarItem(provider: .volcengine, value: sample("¥1.2k"), dotColor: .white),
+            AppStore.MenuBarItem(provider: .custom, value: sample("57%"), dotColor: .white)
+        ]
+        for (name, colorMode) in [("tidepool-all-mode-color.png", true), ("tidepool-all-mode-mono.png", false)] {
+            let composite = StatusIconRenderer.allProvidersIcon(items: allItems, colorMode: colorMode, height: 44)
+            // 垫一层浅灰底，方便目检深浅色文字
+            let wrapped = NSImage(size: NSSize(width: composite.size.width + 16, height: 52))
+            wrapped.lockFocus()
+            NSColor(calibratedWhite: 0.92, alpha: 1).setFill()
+            NSRect(origin: .zero, size: wrapped.size).fill()
+            composite.draw(in: NSRect(x: 8, y: 4, width: composite.size.width, height: composite.size.height))
+            wrapped.unlockFocus()
+            let url = directory.appendingPathComponent(name)
+            if let tiff = wrapped.tiffRepresentation,
                let rep = NSBitmapImageRep(data: tiff),
                let png = rep.representation(using: .png, properties: [:]) {
                 try? png.write(to: url)
@@ -78,6 +141,23 @@ if ProcessInfo.processInfo.arguments.contains("--siliconflow-login") {
         app.setActivationPolicy(.accessory)
         SiliconFlowLoginWindowController.shared.show { _ in }
         app.run()
+    }
+}
+#endif
+
+#if DEBUG
+if ProcessInfo.processInfo.arguments.contains("--dot-check") {
+    MainActor.assumeIsolated {
+        print("menuBarStyle:", Prefs.menuBarStyle.rawValue)
+        print("colorLogo:", Prefs.colorLogo)
+        print("showPricing:", Prefs.showPricing)
+        if let status = ProviderPricing.status(for: .deepseek) {
+            print("deepseek offPeak:", status.isOffPeak, "label:", status.currentLabel)
+        } else {
+            print("deepseek pricing: nil")
+        }
+        print("now:", Date())
+        exit(0)
     }
 }
 #endif

@@ -324,3 +324,161 @@ struct AlibabaCloudProvider: BalanceProviding {
     }
 
 }
+
+// MARK: - 百度千帆账户余额（Finance + BCE 签名）
+
+/// 百度智能云财务 API 的 JSON 解析。
+enum BaiduBalanceParser {
+    static func parse(_ json: Any) throws -> ProviderSnapshot {
+        guard let root = json as? [String: Any] else {
+            throw ProviderError.network(T("响应不是 JSON 对象", "Response is not a JSON object"))
+        }
+        // 错误响应：{"requestId": "...", "code": "AuthnError", "message": "..."}
+        if root["cashBalance"] == nil,
+           let message = root["message"] as? String, !message.isEmpty {
+            throw ProviderError.notSupported(message)
+        }
+        let total: Double?
+        if let number = root["cashBalance"] as? NSNumber {
+            total = number.doubleValue
+        } else if let text = root["cashBalance"] as? String {
+            total = Double(text)
+        } else {
+            total = nil
+        }
+        guard let total else {
+            throw ProviderError.network(T("响应缺少 cashBalance", "Response is missing cashBalance"))
+        }
+        return ProviderSnapshot(
+            fetchedAt: Date(),
+            balance: BalanceSnapshot(
+                currency: "CNY",
+                total: total,
+                granted: nil,
+                toppedUp: nil,
+                isAvailable: total > 0
+            ),
+            quotas: [],
+            planName: "Baidu Qianfan"
+        )
+    }
+}
+
+struct BaiduCloudProvider: BalanceProviding {
+    func fetch(apiKey: String, baseURL: URL?) async throws -> ProviderSnapshot {
+        guard let credentials = CloudCredentials.decode(apiKey),
+              !credentials.secretId.isEmpty,
+              !credentials.secretKey.isEmpty else {
+            // 千帆控制台创建的是调模型用的 API Key（bce-v3/…），查不了余额，给出可操作的提示
+            let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("bce-v3/") {
+                throw ProviderError.notSupported(
+                    T(
+                        "这是千帆模型服务的 API Key，查不了账户余额。请到百度智能云控制台 → 安全认证，创建 Access Key / Secret Key 后填入。",
+                        "This is a Qianfan model API Key — it cannot query the account balance. Create an Access Key / Secret Key under Baidu Cloud Console → Security Authentication and enter those instead."
+                    )
+                )
+            }
+            throw ProviderError.notSupported(
+                T("请填写百度智能云 Access Key 和 Secret Key", "Enter your Baidu Cloud Access Key and Secret Key")
+            )
+        }
+
+        let host = "billing.baidubce.com"
+        let path = "/v1/finance/cash/balance"
+        let contentType = "application/json; charset=utf-8"
+
+        var request = URLRequest(url: URL(string: "https://\(host)\(path)")!, timeoutInterval: 20)
+        request.httpMethod = "POST"
+        request.httpBody = Data()
+        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            Self.authorization(
+                accessKey: credentials.secretId,
+                secretKey: credentials.secretKey,
+                timestamp: Self.utcTimestamp(),
+                method: "POST",
+                path: path,
+                query: "",
+                headers: ["host": host, "content-type": contentType]
+            ),
+            forHTTPHeaderField: "Authorization"
+        )
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw ProviderError.network(T("无效响应", "Invalid response"))
+        }
+        if http.statusCode == 401 || http.statusCode == 403 {
+            throw ProviderError.invalidKey
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = json["message"] as? String, !message.isEmpty {
+                throw ProviderError.notSupported(message)
+            }
+            throw ProviderError.http(http.statusCode)
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) else {
+            throw ProviderError.network(T("响应不是 JSON", "Response is not JSON"))
+        }
+        return try BaiduBalanceParser.parse(json)
+    }
+
+    /// BCE v1 认证字符串：bce-auth-v1/{AK}/{UTC 时间}/{有效期}/{签名头域}/{签名}。
+    /// SigningKey = HMAC-SHA256-HEX(SK, 前缀)；Signature = HMAC-SHA256-HEX(SigningKey, 规范请求)。
+    static func authorization(
+        accessKey: String,
+        secretKey: String,
+        timestamp: String,
+        method: String,
+        path: String,
+        query: String,
+        headers: [String: String],
+        expiration: Int = 1800
+    ) -> String {
+        let prefix = "bce-auth-v1/\(accessKey)/\(timestamp)/\(expiration)"
+        let signingKey = hmacHex(key: Data(secretKey.utf8), message: Data(prefix.utf8))
+
+        // CanonicalHeaders 按整行 "name:value" 排序；signedHeaders 按名字排序
+        let lines = headers
+            .map { name, value in
+                "\(uriEncode(name.lowercased())):\(uriEncode(value.trimmingCharacters(in: .whitespacesAndNewlines)))"
+            }
+            .sorted()
+        let canonicalHeaders = lines.joined(separator: "\n")
+        let signedHeaders = headers.keys.map { $0.lowercased() }.sorted().joined(separator: ";")
+
+        let canonicalRequest = [method, uriEncodeExceptSlash(path), query, canonicalHeaders]
+            .joined(separator: "\n")
+        let signature = hmacHex(key: Data(signingKey.utf8), message: Data(canonicalRequest.utf8))
+        return "\(prefix)/\(signedHeaders)/\(signature)"
+    }
+
+    static func utcTimestamp(date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        return formatter.string(from: date)
+    }
+
+    /// RFC 3986 UriEncode：保留 A-Z a-z 0-9 - _ . ~，其余百分号编码（十六进制大写）。
+    static func uriEncode(_ string: String, encodeSlash: Bool = true) -> String {
+        var allowed = CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~"
+        )
+        if !encodeSlash { allowed.insert(charactersIn: "/") }
+        return string.addingPercentEncoding(withAllowedCharacters: allowed) ?? string
+    }
+
+    static func uriEncodeExceptSlash(_ string: String) -> String {
+        uriEncode(string).replacingOccurrences(of: "%2F", with: "/")
+    }
+
+    private static func hmacHex(key: Data, message: Data) -> String {
+        let symmetricKey = SymmetricKey(data: key)
+        let code = HMAC<SHA256>.authenticationCode(for: message, using: symmetricKey)
+        return code.map { String(format: "%02x", $0) }.joined()
+    }
+}

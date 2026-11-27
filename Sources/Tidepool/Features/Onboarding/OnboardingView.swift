@@ -99,7 +99,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(T("先添加一个 Provider", "Add your first provider"))
                 .font(.system(size: 15, weight: .semibold))
-            Text(T("余额型显示账户里还剩多少钱，套餐型显示 5 小时 / 每周还能用多少。之后可以随时在设置里添加更多。", "Balance providers show how much credit is left; plan providers show 5-hour and weekly quotas. You can add more later in Settings."))
+            Text(T("余额型显示账户里还剩多少钱，套餐型显示 5 小时 / 每周还能用多少。", "Balance providers show how much credit is left; plan providers show 5-hour and weekly quotas."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -255,16 +255,13 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(T("菜单栏想怎么显示？", "How should the menu bar look?"))
                 .font(.system(size: 15, weight: .semibold))
-            Text(T("之后可以在 Settings → 菜单栏 随时切换。", "You can change this later in Settings → Menu bar."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(T("预览", "Preview"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 5) {
-                    Image(nsImage: StatusIconRenderer.menuBarIcon(provider: provider, colorMode: true, alert: false))
+                    Image(nsImage: StatusIconRenderer.menuBarIcon(provider: provider, colorMode: true, dot: nil))
                     Text(menuBarSample)
                         .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
@@ -414,8 +411,8 @@ struct OnboardingView: View {
         switch provider {
         case .deepseek:
             return T(
-                "在 platform.deepseek.com 的 API Keys 页面创建，仅用于读取余额。",
-                "Create one on platform.deepseek.com → API Keys; it is only used to read your balance."
+                "在 platform.deepseek.com 的 API Keys 页面创建。",
+                "Create one on platform.deepseek.com → API Keys."
             )
         case .moonshot:
             return T(
@@ -452,6 +449,8 @@ struct OnboardingView: View {
             return T("在设置里添加后，填写 SecretId / SecretKey（存钥匙串）。", "Add it in Settings, then enter your SecretId / SecretKey (stored in the Keychain).")
         case .huawei:
             return T("在设置里添加后，填写 Access Key / Secret Key（存钥匙串）。", "Add it in Settings, then enter your Access Key / Secret Key (stored in the Keychain).")
+        case .qianfan:
+            return T("在设置里添加后，填写百度智能云 Access Key / Secret Key（存钥匙串）。", "Add it in Settings, then enter your Baidu Cloud Access Key / Secret Key (stored in the Keychain).")
         }
     }
 
@@ -468,9 +467,9 @@ struct OnboardingView: View {
         case .single:
             return value
         case .all:
+            return "\(provider.displayName) \(value) · GLM 72%"
+        case .allCompact:
             return "\(value) · 72%"
-        case .tightest:
-            return preview?.sortedQuotas.first?.remainingPercent != nil ? value : "¥1.3k"
         }
     }
 
@@ -479,9 +478,9 @@ struct OnboardingView: View {
         case .single:
             return T("只显示当前 Provider，最干净", "Only the current provider — cleanest")
         case .all:
-            return T("所有 Provider 并排显示，信息最全", "All providers side by side — most information")
-        case .tightest:
-            return T("只显示剩余最少的那一项，最省空间", "Only the tightest quota — smallest footprint")
+            return T("所有 Provider 带名称并排显示，信息最全", "All providers with names — most information")
+        case .allCompact:
+            return T("所有数值紧凑排列，最省空间", "All values, compact — smallest footprint")
         }
     }
 

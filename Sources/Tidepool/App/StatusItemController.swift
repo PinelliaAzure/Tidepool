@@ -11,6 +11,7 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     private var popoverController: NSHostingController<AnyView>?
     private var dismissMonitors: [Any] = []
     private var priceTimer: Timer?
+    private var appearanceObserver: NSKeyValueObservation?
 
     init(store: AppStore) {
         self.store = store
@@ -39,32 +40,37 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
                 self?.refreshStatusItem()
             }
         }
+
+        // 外观切换时重绘合成图
+        appearanceObserver = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.refreshStatusItem()
+            }
+        }
     }
 
     /// 依据 AppStore 的最新状态刷新菜单栏显示。
     func refreshStatusItem() {
         guard let button = statusItem.button else { return }
         let content = store.menuBarContent
+
+        if !content.allItems.isEmpty {
+            // 「全部」模式：品牌 logo + 数值合成一张图，每个 logo 带状态圆点
+            button.image = StatusIconRenderer.allProvidersIcon(
+                items: content.allItems,
+                colorMode: store.colorLogo
+            )
+            button.attributedTitle = NSAttributedString(string: "")
+            button.toolTip = content.tooltip
+            return
+        }
+
         button.image = StatusIconRenderer.menuBarIcon(
             provider: content.provider,
             colorMode: store.colorLogo,
-            alert: content.alert
+            dot: content.dotColor
         )
-
-        let title = content.text ?? ""
-        if title.isEmpty {
-            button.attributedTitle = NSAttributedString(string: "")
-        } else {
-            var attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
-                .foregroundColor: NSColor.labelColor
-            ]
-            if let tint = content.pricingTint {
-                attributes[.underlineStyle] = NSUnderlineStyle.thick.rawValue
-                attributes[.underlineColor] = tint
-            }
-            button.attributedTitle = NSAttributedString(string: title, attributes: attributes)
-        }
+        button.attributedTitle = content.title ?? NSAttributedString(string: "")
         button.toolTip = content.tooltip
     }
 

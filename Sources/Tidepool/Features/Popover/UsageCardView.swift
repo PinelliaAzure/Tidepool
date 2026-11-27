@@ -26,11 +26,9 @@ struct UsageCardView: View {
                     .buttonStyle(.plain)
                 }
 
-                HStack(spacing: 0) {
+                HStack(spacing: 8) {
                     metric(T("近 7 天", "Last 7 days"), TideFormatter.tokens(summary.totalTokens(days: 7)))
-                    divider
                     metric(T("估算费用", "Est. cost"), costText(summary.totalCost(days: 7)))
-                    divider
                     metric(
                         T("缓存命中", "Cache hit"),
                         summary.cacheHitRate(days: 7).map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
@@ -41,14 +39,8 @@ struct UsageCardView: View {
         }
     }
 
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(width: 1, height: 26)
-    }
-
     private func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(spacing: 3) {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -56,7 +48,7 @@ struct UsageCardView: View {
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func costText(_ value: Double) -> String {
