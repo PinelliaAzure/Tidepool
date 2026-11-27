@@ -232,7 +232,7 @@ final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     }
 
     @objc private func checkUpdates(_ sender: Any?) {
-        UpdateChecker.openReleases()
+        UpdateService.shared.checkForUpdates()
     }
 
     @objc private func openSettings(_ sender: Any?) {

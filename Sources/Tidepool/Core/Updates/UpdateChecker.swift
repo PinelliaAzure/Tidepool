@@ -10,6 +10,9 @@ enum UpdateChecker {
         repositoryURL.appendingPathComponent("releases")
     }
 
+    static let latestReleaseAPIURL =
+        URL(string: "https://api.github.com/repos/PinelliaAzure/Tidepool/releases/latest")!
+
     @MainActor
     static func openReleases() {
         NSWorkspace.shared.open(releasesURL)

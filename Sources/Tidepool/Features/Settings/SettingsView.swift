@@ -109,7 +109,7 @@ struct SettingsView: View {
                     }
                     .controlSize(.small)
                     Button(T("检查更新…", "Check for updates…")) {
-                        UpdateChecker.openReleases()
+                        UpdateService.shared.checkForUpdates()
                     }
                     .controlSize(.small)
                     Spacer()
